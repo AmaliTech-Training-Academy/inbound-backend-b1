@@ -82,6 +82,8 @@ model Inbox {
   @@index([address])
 }
 
+Inbox Model Purpose: represents one disposable email address and its lifecycle.
+
 model Message {
   id           String       @id @default(uuid())
   inboxId      String
@@ -113,6 +115,8 @@ enum MessageStatus {
   FAILED
 }
 
+Message Model Purpose: represents one received, parsed email.
+
 model Attachment {
   id           String   @id @default(uuid())
   messageId    String
@@ -130,6 +134,8 @@ model Attachment {
   @@index([expiresAt])
 }
 
+Attachment Model Purpose: represents one file attached to a message.
+
 model IngestLog {
   id            String   @id @default(uuid())
   rawObjectKey  String?
@@ -140,6 +146,8 @@ model IngestLog {
 
   @@index([createdAt])
 }
+
+IngestLog Model Purpose: an audit trail for the mail-ingestion endpoint (T4) — separate from Message because it logs every inbound attempt, including ones that get rejected (unknown recipient, expired inbox, malformed payload).
 ```
 
 ### Field type summary (for frontend contracts)
