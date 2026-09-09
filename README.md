@@ -15,3 +15,6 @@ Pushes schema changes directly to the database.
 ### `npm run prisma:studio`
 
 Launches Prisma Studio, allowing you to manage and view your database through a GUI.
+
+
+
