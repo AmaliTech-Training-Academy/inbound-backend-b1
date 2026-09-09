@@ -2,24 +2,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
 }
-
-
 
 model Inbox {
   id             String    @id @default(uuid())
   address        String    @unique
   localPart      String
   domain         String
-  token          String    @unique
   createdAt      DateTime  @default(now())
   expiresAt      DateTime
   lastExtendedAt DateTime?
   extendCount    Int       @default(0)
   isDeleted      Boolean   @default(false)
+  tokenHash      String    @unique
   messages       Message[]
 
   @@index([expiresAt])
@@ -27,10 +24,8 @@ model Inbox {
 }
 
 model Message {
-  id      String @id @default(uuid())
-  inboxId String
-  inbox   Inbox  @relation(fields: [inboxId], references: [id], onDelete: Cascade)
-
+  id           String        @id @default(uuid())
+  inboxId      String
   fromAddress  String
   fromName     String?
   toAddress    String
@@ -39,30 +34,28 @@ model Message {
   htmlBody     String?
   rawHtmlSize  Int?
   rawObjectKey String?
-
-  status     MessageStatus @default(PENDING)
-  receivedAt DateTime      @default(now())
-  expiresAt  DateTime
-  sizeBytes  Int           @default(0)
-
-  attachments Attachment[]
+  status       MessageStatus @default(PENDING)
+  receivedAt   DateTime      @default(now())
+  expiresAt    DateTime
+  sizeBytes    Int           @default(0)
+  attachments  Attachment[]
+  inbox        Inbox         @relation(fields: [inboxId], references: [id], onDelete: Cascade)
 
   @@index([inboxId, receivedAt])
   @@index([expiresAt])
 }
 
 model Attachment {
-  id        String  @id @default(uuid())
-  messageId String
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
+  id          String   @id @default(uuid())
+  messageId   String
   filename    String
   contentType String
   sizeBytes   Int
-  objectKey   String // S3/R2 storage key
-  checksum    String? // sha256, for de-dup / integrity check
+  objectKey   String
+  checksum    String?
   createdAt   DateTime @default(now())
-  expiresAt   DateTime // mirrors parent message expiry
+  expiresAt   DateTime
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([expiresAt])

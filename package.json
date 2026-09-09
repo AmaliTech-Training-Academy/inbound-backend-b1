@@ -7,7 +7,7 @@
     "start": "node src/api/v1/index.js",
     "dev": "nodemon src/api/v1/index.js",
     "prisma:generate": "npx prisma generate --schema=./src/api/v1/prisma/schema.prisma",
-    "prisma:studio": "npx prisma studio --schema=./src/api/v1/prisma/schema.prisma --port=10127",
+    "prisma:studio": "npx prisma studio --port=10127",
     "prisma:format": "npx prisma format --schema=./src/api/v1/prisma/schema.prisma",
     "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma"
   },
