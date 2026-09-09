@@ -1,50 +1,79 @@
 datasource db {
   provider = "postgresql"
 }
+
 generator client {
   provider = "prisma-client-js"
 }
 
 model Inbox {
-  id         String     @id @default(uuid())
-  address    String     @unique              // "swift-otter-482@tempmail.dev"
-  localPart  String                          // "swift-otter-482" (indexed for regen retries)
-  domain     String                          // "tempmail.dev"
-  token      String     @unique              // bearer token to manage this inbox from frontend
-  createdAt  DateTime   @default(now())
-  expiresAt  DateTime                        // extendable
+  id             String    @id @default(uuid())
+  address        String    @unique
+  localPart      String
+  domain         String
+  token          String    @unique
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
   lastExtendedAt DateTime?
-  extendCount    Int    @default(0)          // cap extensions to prevent indefinite inboxes
-  isDeleted  Boolean    @default(false)      // soft flag before hard delete
-  messages   Message[]
+  extendCount    Int       @default(0)
+  isDeleted      Boolean   @default(false)
+  messages       Message[]
 
   @@index([expiresAt])
   @@index([address])
 }
 
 model Message {
-  id           String       @id @default(uuid())
-  inboxId      String
-  inbox        Inbox        @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+  id      String @id @default(uuid())
+  inboxId String
+  inbox   Inbox  @relation(fields: [inboxId], references: [id], onDelete: Cascade)
 
   fromAddress  String
   fromName     String?
   toAddress    String
   subject      String?
-  textBody     String?      // plain text
-  htmlBody     String?      // sanitized HTML (safe to render)
-  rawHtmlSize  Int?         // bytes, pre-sanitization, for auditing
-  rawObjectKey String?      // S3/R2 key of the original raw .eml, for debugging/reprocessing
+  textBody     String?
+  htmlBody     String?
+  rawHtmlSize  Int?
+  rawObjectKey String?
 
-  status       MessageStatus @default(PENDING) // PENDING -> PARSED -> FAILED
-  receivedAt   DateTime     @default(now())
-  expiresAt    DateTime                        // inherited from inbox at ingestion time
-  sizeBytes    Int          @default(0)
+  status     MessageStatus @default(PENDING)
+  receivedAt DateTime      @default(now())
+  expiresAt  DateTime
+  sizeBytes  Int           @default(0)
 
-  attachments  Attachment[]
+  attachments Attachment[]
 
   @@index([inboxId, receivedAt])
   @@index([expiresAt])
+}
+
+model Attachment {
+  id        String  @id @default(uuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  filename    String
+  contentType String
+  sizeBytes   Int
+  objectKey   String // S3/R2 storage key
+  checksum    String? // sha256, for de-dup / integrity check
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime // mirrors parent message expiry
+
+  @@index([messageId])
+  @@index([expiresAt])
+}
+
+model IngestLog {
+  id           String   @id @default(uuid())
+  rawObjectKey String?
+  recipient    String
+  accepted     Boolean
+  rejectReason String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 enum MessageStatus {
@@ -52,32 +81,3 @@ enum MessageStatus {
   PARSED
   FAILED
 }
-
-model Attachment {
-  id           String   @id @default(uuid())
-  messageId    String
-  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  filename     String
-  contentType  String
-  sizeBytes    Int
-  objectKey    String   // S3/R2 storage key
-  checksum     String?  // sha256, for de-dup / integrity check
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime // mirrors parent message expiry
-
-  @@index([messageId])
-  @@index([expiresAt])
-}
-
-model IngestLog {
-  id            String   @id @default(uuid())
-  rawObjectKey  String?
-  recipient     String
-  accepted      Boolean
-  rejectReason  String?
-  createdAt     DateTime @default(now())
-
-  @@index([createdAt])
-}
-
