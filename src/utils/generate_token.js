@@ -12,4 +12,3 @@ export function hashToken(token) {
 }
 
 
-console.log(generateToken())
