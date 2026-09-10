@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { env } from "../configs/env.js";
-import { FIRST_NAMES, LAST_NAMES } from "./names.js";
+import "dotenv/config";
+import { FIRST_NAMES, LAST_NAMES } from "./components/rand_name.js";
 
 function pick(arr) {
   return arr[crypto.randomInt(arr.length)];
@@ -84,6 +84,9 @@ export function generateAddress() {
 
   return {
     localPart,
-    address: `${localPart}@${env.DOMAIN_ADDRESS}`,
+    address: `${localPart}@${process.env.DOMAIN_ADDRESS}`,
   };
 }
+
+// you can test the generation of Address
+// console.log(generateAddress())
