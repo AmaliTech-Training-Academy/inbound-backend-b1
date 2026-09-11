@@ -1,9 +1,11 @@
 // run app for our inbounder email server
 import express from "express";
 import http from "node:http";
+import swaggerUi from "swagger-ui-express";
 import initRoute from "../v1/routes/initRoute.js";
 import { v1Router } from "./routes/router.js";
 import { initWebSocket } from "../../configs/websocket.js";
+import swaggerDefinition from "../../configs/swagger.js";
 
 const app = express();
 
@@ -15,6 +17,7 @@ const PORT = process.env.PORT || 9001;
 
 
 app.use(initRoute)
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDefinition));
 app.use(v1Router)
 
 const server = http.createServer(app);
