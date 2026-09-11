@@ -79,7 +79,7 @@ const swaggerDefinition = {
       }
     },
     "/api/v1/inbox": {
-      get: {
+      post: {
         tags: ["Inbox"],
         summary: "Create a disposable inbox",
         description: "Creates a random email address and temporary inbox.",
@@ -106,9 +106,96 @@ const swaggerDefinition = {
           }
         }
       }
+    },
+    "/api/v1/inbox/info": {
+      post: {
+        tags: ["Inbox"],
+        summary: "Fetch inbox information",
+        description: "Fetches inbox metadata using the inbox id and access token.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/InboxInfoRequest"
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: "Inbox information fetched",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InboxInfoResponse"
+                }
+              }
+            }
+          },
+          400: {
+            description: "Invalid inbox id",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          401: {
+            description: "Missing or invalid authorization token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          404: {
+            description: "Inbox not found",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          410: {
+            description: "Inbox has expired",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          500: {
+            description: "Unable to fetch inbox information",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "token"
+      }
+    },
     schemas: {
       SuccessResponse: {
         type: "object",
@@ -214,6 +301,57 @@ const swaggerDefinition = {
                   token: {
                     type: "string",
                     example: "temporary-access-token"
+                  },
+                  expiresAt: {
+                    type: "string",
+                    format: "date-time",
+                    example: "2026-09-11T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      InboxInfoRequest: {
+        type: "object",
+        required: ["id"],
+        properties: {
+          id: {
+            type: "string",
+            example: "clx1234567890"
+          }
+        }
+      },
+      InboxInfoResponse: {
+        allOf: [
+          {
+            $ref: "#/components/schemas/SuccessResponse"
+          },
+          {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                example: "Inbox Fetched Success"
+              },
+              data: {
+                type: "object",
+                required: ["address", "domain", "createdAt", "expiresAt"],
+                properties: {
+                  address: {
+                    type: "string",
+                    format: "email",
+                    example: "a7k2m9@inbound.test"
+                  },
+                  domain: {
+                    type: "string",
+                    example: "inbound.test"
+                  },
+                  createdAt: {
+                    type: "string",
+                    format: "date-time",
+                    example: "2026-09-11T10:00:00.000Z"
                   },
                   expiresAt: {
                     type: "string",
