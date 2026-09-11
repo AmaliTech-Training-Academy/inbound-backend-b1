@@ -60,22 +60,29 @@ export const createInbox = asyncHandler(async (req, res) => {
 
 export const getInboxInfo = asyncHandler(async (req, res) => {
   try {
-    const { id } = req.query;
-    if (!id) {
-      return res.status(400).json({
+    const token = req.token;
+
+    const decodedToken = hashToken(token);
+    const inbox = await prisma.inbox.findUnique({
+      where: {
+        tokenHash: decodedToken,
+      },
+    });
+
+    if (!inbox) {
+      return res.status(404).json({
         success: false,
-        message: "Inbox id is required",
+        message: "Inbox Not Found",
       });
     }
 
-    const inbox = req.inbox;
-    if (inbox.id !== id) {
+    if (inbox.isDeleted == true) {
       return res.status(404).json({
         success: false,
-        message: "Inbox not found",
+        message: "Inbox has been deleted",
       });
     }
-    
+
     const currentTime = getCurrentTime();
     if (currentTime >= inbox.expiresAt) {
       return res.status(410).json({
@@ -89,10 +96,12 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
       message: "Inbox Fetched Success",
       data: {
         address: inbox.address,
+        localPart: inbox.localPart,
+
         domain: inbox.domain,
         createdAt: inbox.createdAt,
         expiresAt: inbox.expiresAt,
-      }
+      },
     });
   } catch (error) {
     return res.status(500).json({

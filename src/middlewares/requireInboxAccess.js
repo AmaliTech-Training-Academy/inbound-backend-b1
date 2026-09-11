@@ -37,7 +37,7 @@ export const requireInboxAccess = async (req, res, next) => {
     if (!inbox) {
       return res.status(401).json({
         success: false,
-        message: "Invalid authorization token",
+        message: "Inbox Not Found",
       });
     }
 
@@ -48,14 +48,9 @@ export const requireInboxAccess = async (req, res, next) => {
       });
     }
 
-    if (req.params.id && req.params.id !== inbox.id) {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have access to this inbox",
-      });
-    }
+    
 
-    req.inbox = inbox;
+    
     req.token = token;
 
     next();
