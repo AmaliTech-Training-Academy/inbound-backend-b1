@@ -10,7 +10,8 @@
     "prisma:generate": "npx prisma generate --schema=./src/api/v1/prisma/schema.prisma",
     "prisma:studio": "npx prisma studio --port=10129",
     "prisma:format": "npx prisma format --schema=./src/api/v1/prisma/schema.prisma",
-    "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma"
+    "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma",
+    "mailgun:configure-inbound": "node scripts/configure-mailgun-inbound-route.js"
   },
   "keywords": [],
   "author": "",
