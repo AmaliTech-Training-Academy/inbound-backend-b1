@@ -3,7 +3,7 @@ import { createInbox } from '../controllers/inboxController.js';
 
 const router = express.Router();
 
-router.get('/gen-mail',
+router.get('/',
     createInbox
 )
 
