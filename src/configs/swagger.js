@@ -108,21 +108,25 @@ const swaggerDefinition = {
       }
     },
     "/api/v1/inbox/info": {
-      post: {
+      get: {
         tags: ["Inbox"],
         summary: "Fetch inbox information",
-        description: "Fetches inbox metadata using the inbox id and access token.",
+        description:
+          "Fetches inbox metadata using the inbox id and access token. " +
+          "The frontend sends the raw token as a bearer token; the server hashes it before comparing it with the stored token hash.",
         security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                $ref: "#/components/schemas/InboxInfoRequest"
-              }
+        parameters: [
+          {
+            name: "id",
+            in: "query",
+            required: true,
+            description: "The inbox id returned when the inbox was created.",
+            schema: {
+              type: "string",
+              example: "clx1234567890"
             }
           }
-        },
+        ],
         responses: {
           200: {
             description: "Inbox information fetched",
@@ -312,16 +316,6 @@ const swaggerDefinition = {
             }
           }
         ]
-      },
-      InboxInfoRequest: {
-        type: "object",
-        required: ["id"],
-        properties: {
-          id: {
-            type: "string",
-            example: "clx1234567890"
-          }
-        }
       },
       InboxInfoResponse: {
         allOf: [

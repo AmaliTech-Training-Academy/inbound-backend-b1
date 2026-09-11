@@ -1,5 +1,6 @@
 
 import prisma from  '../configs/prisma.js'
+import { hashToken } from '../utils/generateToken.js';
 
 export const requireInboxAccess = async (req, res, next) => {
   try {
@@ -27,13 +28,12 @@ export const requireInboxAccess = async (req, res, next) => {
         message: "Authorization token is required",
       });
     }
-
+  const tokenHash = hashToken(token);
     const inbox = await prisma.inbox.findUnique({
       where: {
-        token,
+    tokenHash,
       },
     });
-    //empty val check
     if (!inbox) {
       return res.status(401).json({
         success: false,
@@ -41,7 +41,6 @@ export const requireInboxAccess = async (req, res, next) => {
       });
     }
 
-    //this is the expiry check
     if (new Date() >= inbox.expiresAt) {
       return res.status(410).json({
         success: false,
@@ -49,7 +48,6 @@ export const requireInboxAccess = async (req, res, next) => {
       });
     }
 
-    //this is the ownership check
     if (req.params.id && req.params.id !== inbox.id) {
       return res.status(403).json({
         success: false,
