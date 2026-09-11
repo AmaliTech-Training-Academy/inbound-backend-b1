@@ -1,0 +1,115 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+model Inbox {
+  id String @id @default(uuid())
+
+  address   String @unique
+  localPart String
+  domain    String
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  lastExtendedAt DateTime?
+  extendCount    Int       @default(0)
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  tokenHash String @unique
+
+  messages Message[]
+
+  @@index([expiresAt])
+  @@index([domain, localPart])
+  @@index([isDeleted, expiresAt])
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  inboxId String
+
+  fromAddress String
+  fromName    String?
+  toAddress   String
+
+  subject String?
+
+  textBody String?
+  htmlBody String?
+
+  rawObjectKey String?
+  rawSizeBytes Int?
+
+  sizeBytes Int @default(0)
+
+  status MessageStatus @default(PENDING)
+
+  receivedAt DateTime  @default(now())
+  parsedAt   DateTime?
+  expiresAt  DateTime
+
+  errorMessage String?
+
+  inbox Inbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+
+  attachments Attachment[]
+
+  @@index([inboxId, receivedAt])
+  @@index([inboxId, status])
+  @@index([expiresAt])
+  @@index([toAddress])
+}
+
+model Attachment {
+  id String @id @default(uuid())
+
+  messageId String
+
+  filename    String
+  contentType String
+  sizeBytes   Int
+
+  objectKey String
+  checksum  String?
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([expiresAt])
+}
+
+model IngestLog {
+  id String @id @default(uuid())
+
+  recipient String
+  accepted  Boolean
+
+  rejectReason String?
+
+  rawObjectKey String?
+  sizeBytes    Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([recipient, createdAt])
+  @@index([accepted, createdAt])
+}
+
+enum MessageStatus {
+  PENDING
+  PARSED
+  FAILED
+}
