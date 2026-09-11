@@ -1,6 +1,15 @@
 import { Server } from 'socket.io';
 import { verifyInboxAccess } from '../lib/inboxAccess.js';
 
+export function publishNewMessage(io, inboxId, message) {
+  io.to(`inbox:${inboxId}`).emit('message:new', {
+    id: message.id,
+    fromAddress: message.fromAddress,
+    subject: message.subject,
+    receivedAt: message.receivedAt
+  });
+}
+
 export const initWebSocket = (server, checkInboxAccess = verifyInboxAccess) => {
   
     const io = new Server(server, {
