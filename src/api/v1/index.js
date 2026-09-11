@@ -1,4 +1,5 @@
 // run app for our inbounder email server
+import "dotenv/config"; // must be first: loads env before prisma.js reads DATABASE_URL
 import express from "express";
 import initRoute from "../v1/routes/initRoute.js";
 import { v1Router } from "./routes/router.js";
