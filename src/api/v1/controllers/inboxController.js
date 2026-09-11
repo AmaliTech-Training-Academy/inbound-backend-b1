@@ -26,7 +26,6 @@ try {
       try {
         const inbox = await prisma.inbox.create({
           data: {
-            
             address,
             localPart,
             domain: MAIL_DOMAIN,
@@ -37,10 +36,14 @@ try {
 
 
         return res.status(201).json({
-          id: inbox.id,
+          success:true,
+          data: {
+             id: inbox.id,
           address: inbox.address,
           token,
           expiresAt: inbox.expiresAt,
+          }
+         
         });   
       } catch (error) {
         if (error.code === "P2002" && attempt < MAX_ATTEMPTS) {
@@ -50,7 +53,6 @@ try {
         if (error.code === "P2002") {
           throw new Error("Unable to generate a unique inbox address");
         }
-
         throw error;
       }
     }
