@@ -70,21 +70,38 @@ const PATTERNS = [
     `${first}_${randomLetters(1, 2)}${randomDigits(2, 6)}`,
 ];
 
+
+let sequence = crypto.randomInt(0, 36 ** 2);
+
+
+function uniqueSuffix() {
+  const time = Math.floor(Date.now() / 1000).toString(36);
+  sequence = (sequence + 1) % (36 ** 2);
+  const seq = sequence.toString(36).padStart(2, "0");
+  const rand = crypto.randomInt(36 ** 3).toString(36).padStart(3, "0");
+
+  return `${time}${seq}${rand}`;
+}
+
 export function generateLocalPart() {
   const first = pick(FIRST_NAMES).toLowerCase();
   const last = pick(LAST_NAMES).toLowerCase();
 
   const pattern = pick(PATTERNS);
 
-  return pattern({ first, last });
+  const base = pattern({ first, last })
+    .slice(0, 12)
+    .replace(/[._]+$/, "");
+
+  return `${base}${uniqueSuffix()}`;
 }
 
-export function generateAddress() {
+export function generateAddress(domain = process.env.DOMAIN_ADDRESS) {
   const localPart = generateLocalPart();
 
   return {
     localPart,
-    address: `${localPart}@${process.env.DOMAIN_ADDRESS}`,
+    address: `${localPart}@${domain}`,
   };
 }
 
