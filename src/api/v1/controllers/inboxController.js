@@ -60,33 +60,19 @@ export const createInbox = asyncHandler(async (req, res) => {
 
 export const getInboxInfo = asyncHandler(async (req, res) => {
   try {
-    const { id } = req.body;
-    const accessToken = req.token;
+    const { id } = req.query;
     if (!id) {
       return res.status(400).json({
         success: false,
-        error: "Invalid Inbox Id",
+        message: "Inbox id is required",
       });
     }
 
-    const decodedToken = hashToken(accessToken);
-    const inbox = await prisma.inbox.findUnique({
-      where: {
-        tokenHash: decodedToken,
-      },
-    });
-
-    if (!inbox) {
+    const inbox = req.inbox;
+    if (inbox.id !== id) {
       return res.status(404).json({
         success: false,
-        error: "Inbox Not Found",
-      });
-    }
-
-    if (inbox.id != id) {
-      return res.status(404).json({
-        success: false,
-        error: "Inbox Not Found",
+        message: "Inbox not found",
       });
     }
     
@@ -98,24 +84,20 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
       });
     }
 
-
     return res.status(200).json({
-      success:true,
+      success: true,
       message: "Inbox Fetched Success",
       data: {
         address: inbox.address,
         domain: inbox.domain,
-        createdAt : inbox.createdAt,
-        expiresAt:inbox.expiresAt
-          
+        createdAt: inbox.createdAt,
+        expiresAt: inbox.expiresAt,
       }
-    })
+    });
   } catch (error) {
-      return res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "An error occurred while get inbox.",
-      // error: error.message,
     });
-  
   }
 });
