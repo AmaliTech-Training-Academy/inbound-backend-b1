@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
+import { verifyInboxAccess } from '../lib/inboxAccess.js';
 
-export const initWebSocket = (server) => {
+export const initWebSocket = (server, checkInboxAccess = verifyInboxAccess) => {
   
     const io = new Server(server, {
     cors: {
@@ -12,7 +13,7 @@ export const initWebSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
 
-    socket.on('join-inbox', (payload = {}, acknowledge) => {
+    socket.on('join-inbox', async (payload = {}, acknowledge) => {
       const { address, token } = payload;
 
       if (typeof address !== 'string' || !address.trim() || typeof token !== 'string' || !token.trim()) {
@@ -20,9 +21,25 @@ export const initWebSocket = (server) => {
         return;
       }
 
-      const room = `inbox:${address.trim().toLowerCase()}`;
+      const normalizedAddress = address.trim().toLowerCase();
+      let inbox;
+
+      try {
+        inbox = await checkInboxAccess(normalizedAddress, token);
+      } catch (error) {
+        console.error(`Failed to validate inbox access: ${error.message}`);
+        acknowledge?.({ success: false, error: 'unable to validate inbox credentials' });
+        return;
+      }
+
+      if (!inbox) {
+        acknowledge?.({ success: false, error: 'invalid or expired inbox credentials' });
+        return;
+      }
+
+      const room = `inbox:${inbox.id}`;
       socket.join(room);
-      console.log(`Client ${socket.id} joined inbox: ${address}`);
+      console.log(`Client ${socket.id} joined inbox: ${normalizedAddress}`);
       acknowledge?.({ success: true, room });
     });
 
