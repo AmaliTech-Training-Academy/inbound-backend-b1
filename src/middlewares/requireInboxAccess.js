@@ -58,6 +58,7 @@ export const requireInboxAccess = async (req, res, next) => {
     }
 
     req.inbox = inbox;
+    req.token = token;
 
     next();
   } catch (error) {
