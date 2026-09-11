@@ -8,7 +8,7 @@ router.post('/',
     createInbox
 )
 
-router.post('/info',
+router.get('/info',
     requireInboxAccess,
     getInboxInfo
 )
