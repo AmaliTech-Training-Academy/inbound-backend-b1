@@ -3,7 +3,7 @@ import crypto from "node:crypto"
 const MAX_WEBHOOK_AGE_SECONDS = 5*60
 
 export function verifyMailgunSignature({timestamp,token,signature,signingKey,now=Date.now()}){
-    if (!timestamp || !token || !signature){
+    if (!timestamp || !token || !signature || !signingKey){
         return false
     }
 
@@ -19,7 +19,7 @@ export function verifyMailgunSignature({timestamp,token,signature,signingKey,now
 
     const expected = crypto
         .createHmac("SHA256", signingKey)
-        .update(`${timestamp} ${token}`)
+        .update(`${timestamp}${token}`)
         .digest("hex");
 
     const received = Buffer.from(signature, "hex");
