@@ -2,6 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import health from "./healthRoute.js";
 import { inboxRouter } from "./inboxRoute.js";
+import webhookRoute from "./webhookRoute.js";
 
 const API_VERSION = "/api/v1";
 const v1Router = express.Router();
@@ -25,6 +26,10 @@ const routes = [
  {
   path: '/inbox',
   route : inboxRouter
+ },
+ {
+  path: '/webhooks',
+  route: webhookRoute
  }
 ];
 

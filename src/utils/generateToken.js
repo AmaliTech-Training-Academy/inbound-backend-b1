@@ -10,5 +10,3 @@ export function hashToken(token) {
     .update(token)
     .digest("hex");
 }
-
-

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import prisma from "../configs/prisma.js";
-import { hashToken } from "../utils/generate_token.js";
+import { hashToken } from "../utils/generateToken.js";
 
 export async function verifyInboxAccess(address, token) {
   const inbox = await prisma.inbox.findUnique({
