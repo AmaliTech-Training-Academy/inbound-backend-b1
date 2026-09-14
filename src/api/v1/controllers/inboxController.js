@@ -110,3 +110,59 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
+export const extendInboxTime = asyncHandler(async(req,res) => {
+  try {
+    const tokenHash = hashToken(req.token);
+    const inbox = await prisma.inbox.findUnique({
+      where: { tokenHash },
+    });
+
+    if (!inbox) {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox Not Found",
+      });
+    }
+
+    if (inbox.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox has been deleted",
+      });
+    }
+
+    const extensionMinutes = 5;
+    const now = new Date();
+    const baseTime = inbox.expiresAt > now ? inbox.expiresAt : now;
+    const expiresAt = new Date(
+      baseTime.getTime() + extensionMinutes * 60 * 1000
+    );
+
+    const updatedInbox = await prisma.inbox.update({
+      where: { tokenHash },
+      data: {
+        expiresAt,
+        lastExtendedAt: now,
+        extendCount: { increment: 1 },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Inbox time extended successfully",
+      data: {
+        expiresAt: updatedInbox.expiresAt,
+        lastExtendedAt: updatedInbox.lastExtendedAt,
+        extendCount: updatedInbox.extendCount,
+      },
+    });
+  } catch (error) {
+    console.error("Inbox time extension error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to extend inbox time",
+    });
+  }
+});
