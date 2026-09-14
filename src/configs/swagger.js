@@ -190,6 +190,68 @@ const swaggerDefinition = {
           }
         }
       }
+    },
+    "/api/v1/inbox/extend": {
+      patch: {
+        tags: ["Inbox"],
+        summary: "Extend inbox expiration time",
+        description:
+          "Extends the authenticated inbox expiration time by 5 minutes. " +
+          "The frontend sends the raw token as a bearer token.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Inbox expiration time extended",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ExtendInboxResponse"
+                }
+              }
+            }
+          },
+          401: {
+            description: "Missing or invalid authorization token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          404: {
+            description: "Inbox not found or deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          410: {
+            description: "Inbox has expired",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          500: {
+            description: "Unable to extend inbox time",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   components: {
@@ -351,6 +413,43 @@ const swaggerDefinition = {
                     type: "string",
                     format: "date-time",
                     example: "2026-09-11T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      ExtendInboxResponse: {
+        allOf: [
+          {
+            $ref: "#/components/schemas/SuccessResponse"
+          },
+          {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                example: "Inbox time extended successfully"
+              },
+              data: {
+                type: "object",
+                required: ["expiresAt", "lastExtendedAt", "extendCount"],
+                properties: {
+                  expiresAt: {
+                    type: "string",
+                    format: "date-time",
+                    example: "2026-09-11T12:05:00.000Z"
+                  },
+                  lastExtendedAt: {
+                    type: "string",
+                    format: "date-time",
+                    example: "2026-09-11T12:00:00.000Z"
+                  },
+                  extendCount: {
+                    type: "integer",
+                    minimum: 1,
+                    example: 1
                   }
                 }
               }

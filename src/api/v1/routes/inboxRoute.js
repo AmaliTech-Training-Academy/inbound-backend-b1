@@ -1,5 +1,5 @@
 import express from 'express'
-import { createInbox, getInboxInfo } from '../controllers/inboxController.js';
+import { createInbox, getInboxInfo, extendInboxTime } from '../controllers/inboxController.js';
 import { requireInboxAccess } from '../../../middlewares/requireInboxAccess.js';
 
 const router = express.Router();
@@ -11,6 +11,11 @@ router.post('/',
 router.get('/info',
     requireInboxAccess,
     getInboxInfo
+)
+
+router.patch('/extend',
+    requireInboxAccess,
+    extendInboxTime
 )
 
 export {router as inboxRouter};
