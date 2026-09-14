@@ -9,6 +9,7 @@ import { initWebSocket } from "../../configs/websocket.js";
 import swaggerDefinition from "../../configs/swagger.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 
 const HOST = "0.0.0.0";
