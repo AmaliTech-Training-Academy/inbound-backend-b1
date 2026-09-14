@@ -14,7 +14,7 @@ export async function parseInboundEmail(rawEmail){
     });
     
     const rawHtml = parsedEmail.html || "";
-    const htmlBody = rawHtmml ? sanitizeHtml(rawHtml,{
+    const htmlBody = rawHtml ? sanitizeHtml(rawHtml,{
         allowedTags: ALLOWED_TAGS,
         allowedAttributes: {
             a: ["href", "name", "target"],
@@ -32,7 +32,7 @@ export async function parseInboundEmail(rawEmail){
     }) : "";
 
     return {
-        formAddress: parsedEmail.from?.value?.[0]?.address?.toLowerCase() || "unknown",
+        fromAddress: parsedEmail.from?.value?.[0]?.address?.toLowerCase() || "unknown",
         fromName: parsedEmail.from?.value?.[0]?.name || "unknown",
         subject: parsedEmail.subject || "No Subject",
         textBody: parsedEmail.text || "",
@@ -42,7 +42,7 @@ export async function parseInboundEmail(rawEmail){
             filename: attachment.filename || "attachment",
             contentType: attachment.contentType || "application/octet-stream",
             sizeBytes: attachment.size,
-            objectKey: attachment.content,
+            content: attachment.content,
             checksum: attachment.checksum || null
         })),
 
