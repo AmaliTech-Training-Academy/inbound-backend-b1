@@ -98,5 +98,3 @@ Once the simulated call succeeds, send an actual email from any provider to the 
 Mailgun dashboard → Sending → Logs, to confirm the route matched and forwarded successfully
 Your server logs, to confirm the webhook was received
 The Message table (npm run prisma:studio), for the new row
-
-> **Note:** Mailgun sends webhook payloads as multipart/form-data. The webhook route uses multer to parse this — if you add new webhook endpoints, make sure they're covered by the same middleware, or req.body will silently come through empty.
