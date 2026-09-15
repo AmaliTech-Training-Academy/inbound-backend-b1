@@ -1,7 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import health from "./healthRoute.js";
-import { inboxRouter } from "./inboxRoute.js";
 
 const API_VERSION = "/api/v1";
 const v1Router = express.Router();
@@ -22,10 +21,6 @@ const routes = [
     path: '/health',
     route: health
  },
- {
-  path: '/inbox',
-  route : inboxRouter
- }
 ];
 
 
