@@ -23,7 +23,6 @@ app.use(express.urlencoded({
 }))
 
 app.use(initRoute)
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDefinition));
 app.use(v1Router)
 
 const server = http.createServer(app);

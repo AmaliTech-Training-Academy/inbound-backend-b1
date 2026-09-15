@@ -22,10 +22,6 @@ const routes = [
     path: '/health',
     route: health
  },
- {
-  path: '/inbox',
-  route : inboxRouter
- }
 ];
 
 
