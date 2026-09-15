@@ -1,22 +1,24 @@
 // run app for our inbounder email server
 import express from "express";
+import http from "node:http";
 import initRoute from "../v1/routes/initRoute.js";
 import { v1Router } from "./routes/router.js";
+import { initWebSocket } from "../../configs/websocket.js";
 
 const app = express();
-
 
 const HOST = "0.0.0.0";
 const PORT = process.env.PORT || 9001;
 
+app.use(initRoute);
+app.use(v1Router);
 
+const server = http.createServer(app);
+const io = initWebSocket(server);
+app.set("io", io);
 
-
-app.use(initRoute)
-app.use(v1Router)
-
-
-
-const server = app.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
 });
+
+export { app };
