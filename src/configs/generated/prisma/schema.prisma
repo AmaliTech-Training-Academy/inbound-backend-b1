@@ -52,7 +52,7 @@ model Message {
   sizeBytes Int @default(0)
 
   status MessageStatus @default(PENDING)
-  isRead Boolean @default(false)
+  isRead Boolean       @default(false)
 
   receivedAt DateTime  @default(now())
   parsedAt   DateTime?
