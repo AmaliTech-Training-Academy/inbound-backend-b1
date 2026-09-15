@@ -43,8 +43,9 @@ model Message {
 
   subject String?
 
-  textBody String?
-  htmlBody String?
+  textBody    String?
+  htmlBody    String?
+  rawHtmlSize Int?
 
   rawObjectKey String?
   rawSizeBytes Int?
