@@ -96,6 +96,70 @@ describe("WebSocket Real-Time Message Push & Isolation", () => {
       success: true,
       room: "inbox:inbox-1"
     });
+      
+    wait expect(
+      waitForSubscription(clientB, "second@temp.com", "valid-token")
+    ).resolves.toEqual({
+      success: true,
+      room: "inbox:inbox-2"
+    });
+
+    expect(accessChecker).toHaveBeenNthCalledWith(
+      1,
+      "first@temp.com",
+      "valid-token"
+    );
+
+    const clientAMessage = waitForMessage(clientA);
+    let clientBReceivedMessage = false;
+    clientB.once("message:new", () => {
+      clientBReceivedMessage = true;
+    });
+
+    publishNewMessage(io, "inbox-1", {
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code",
+      receivedAt: new Date().toISOString()
+    });
+
+    await expect(clientAMessage).resolves.toMatchObject({
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code"
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(clientBReceivedMessage).toBe(false);
+    
+  });
+
+  it("rejects an invalid token without joining a room", async () => {
+    const { port } = await createTestServer();
+    const client = createClient(`http://localhost:${port}`, {
+      transports: ["websocket"]
+    });
+    activeClients.push(client);
+
+    await waitForConnection(client);
+
+    await expect(
+      waitForSubscription(client, "first@temp.com", "wrong-token")
+    ).rejects.toThrow("invalid or expired inbox credentials");
+  });
+
+  it("handles client disconnect cleanly", async () => {
+    const { port } = await createTestServer();
+    const client = createClient(`http://localhost:${port}`, {
+      transports: ["websocket"]
+    });
+    activeClients.push(client);
+
+    await waitForConnection(client);
+    client.disconnect();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(client.connected).toBe(false);
     await expect(
       waitForSubscription(clientB, "second@temp.com", "valid-token")
     ).resolves.toEqual({
