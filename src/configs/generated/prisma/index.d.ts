@@ -2447,11 +2447,13 @@ export namespace Prisma {
 
   export type MessageAvgAggregateOutputType = {
     rawSizeBytes: number | null
+    rawHtmlSize: number | null
     sizeBytes: number | null
   }
 
   export type MessageSumAggregateOutputType = {
     rawSizeBytes: number | null
+    rawHtmlSize: number | null
     sizeBytes: number | null
   }
 
@@ -2466,6 +2468,7 @@ export namespace Prisma {
     htmlBody: string | null
     rawObjectKey: string | null
     rawSizeBytes: number | null
+    rawHtmlSize: number | null
     sizeBytes: number | null
     status: $Enums.MessageStatus | null
     isRead: boolean | null
@@ -2486,6 +2489,7 @@ export namespace Prisma {
     htmlBody: string | null
     rawObjectKey: string | null
     rawSizeBytes: number | null
+    rawHtmlSize: number | null
     sizeBytes: number | null
     status: $Enums.MessageStatus | null
     isRead: boolean | null
@@ -2506,6 +2510,7 @@ export namespace Prisma {
     htmlBody: number
     rawObjectKey: number
     rawSizeBytes: number
+    rawHtmlSize: number
     sizeBytes: number
     status: number
     isRead: number
@@ -2519,11 +2524,13 @@ export namespace Prisma {
 
   export type MessageAvgAggregateInputType = {
     rawSizeBytes?: true
+    rawHtmlSize?: true
     sizeBytes?: true
   }
 
   export type MessageSumAggregateInputType = {
     rawSizeBytes?: true
+    rawHtmlSize?: true
     sizeBytes?: true
   }
 
@@ -2538,6 +2545,7 @@ export namespace Prisma {
     htmlBody?: true
     rawObjectKey?: true
     rawSizeBytes?: true
+    rawHtmlSize?: true
     sizeBytes?: true
     status?: true
     isRead?: true
@@ -2558,6 +2566,7 @@ export namespace Prisma {
     htmlBody?: true
     rawObjectKey?: true
     rawSizeBytes?: true
+    rawHtmlSize?: true
     sizeBytes?: true
     status?: true
     isRead?: true
@@ -2578,6 +2587,7 @@ export namespace Prisma {
     htmlBody?: true
     rawObjectKey?: true
     rawSizeBytes?: true
+    rawHtmlSize?: true
     sizeBytes?: true
     status?: true
     isRead?: true
@@ -2685,6 +2695,7 @@ export namespace Prisma {
     htmlBody: string | null
     rawObjectKey: string | null
     rawSizeBytes: number | null
+    rawHtmlSize: number | null
     sizeBytes: number
     status: $Enums.MessageStatus
     isRead: boolean
@@ -2724,6 +2735,7 @@ export namespace Prisma {
     htmlBody?: boolean
     rawObjectKey?: boolean
     rawSizeBytes?: boolean
+    rawHtmlSize?: boolean
     sizeBytes?: boolean
     status?: boolean
     isRead?: boolean
@@ -2747,6 +2759,7 @@ export namespace Prisma {
     htmlBody?: boolean
     rawObjectKey?: boolean
     rawSizeBytes?: boolean
+    rawHtmlSize?: boolean
     sizeBytes?: boolean
     status?: boolean
     isRead?: boolean
@@ -2768,6 +2781,7 @@ export namespace Prisma {
     htmlBody?: boolean
     rawObjectKey?: boolean
     rawSizeBytes?: boolean
+    rawHtmlSize?: boolean
     sizeBytes?: boolean
     status?: boolean
     isRead?: boolean
@@ -2789,6 +2803,7 @@ export namespace Prisma {
     htmlBody?: boolean
     rawObjectKey?: boolean
     rawSizeBytes?: boolean
+    rawHtmlSize?: boolean
     sizeBytes?: boolean
     status?: boolean
     isRead?: boolean
@@ -2798,7 +2813,7 @@ export namespace Prisma {
     errorMessage?: boolean
   }
 
-  export type MessageOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "inboxId" | "fromAddress" | "fromName" | "toAddress" | "subject" | "textBody" | "htmlBody" | "rawObjectKey" | "rawSizeBytes" | "sizeBytes" | "status" | "isRead" | "receivedAt" | "parsedAt" | "expiresAt" | "errorMessage", ExtArgs["result"]["message"]>
+  export type MessageOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "inboxId" | "fromAddress" | "fromName" | "toAddress" | "subject" | "textBody" | "htmlBody" | "rawObjectKey" | "rawSizeBytes" | "rawHtmlSize" | "sizeBytes" | "status" | "isRead" | "receivedAt" | "parsedAt" | "expiresAt" | "errorMessage", ExtArgs["result"]["message"]>
   export type MessageInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     inbox?: boolean | InboxDefaultArgs<ExtArgs>
     attachments?: boolean | Message$attachmentsArgs<ExtArgs>
@@ -2828,6 +2843,7 @@ export namespace Prisma {
       htmlBody: string | null
       rawObjectKey: string | null
       rawSizeBytes: number | null
+      rawHtmlSize: number | null
       sizeBytes: number
       status: $Enums.MessageStatus
       isRead: boolean
@@ -3270,6 +3286,7 @@ export namespace Prisma {
     readonly htmlBody: FieldRef<"Message", 'String'>
     readonly rawObjectKey: FieldRef<"Message", 'String'>
     readonly rawSizeBytes: FieldRef<"Message", 'Int'>
+    readonly rawHtmlSize: FieldRef<"Message", 'Float'>
     readonly sizeBytes: FieldRef<"Message", 'Int'>
     readonly status: FieldRef<"Message", 'MessageStatus'>
     readonly isRead: FieldRef<"Message", 'Boolean'>
@@ -5971,6 +5988,7 @@ export namespace Prisma {
     htmlBody: 'htmlBody',
     rawObjectKey: 'rawObjectKey',
     rawSizeBytes: 'rawSizeBytes',
+    rawHtmlSize: 'rawHtmlSize',
     sizeBytes: 'sizeBytes',
     status: 'status',
     isRead: 'isRead',
@@ -6090,20 +6108,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'MessageStatus'
-   */
-  export type EnumMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MessageStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'MessageStatus[]'
-   */
-  export type ListEnumMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MessageStatus[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -6114,6 +6118,20 @@ export namespace Prisma {
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'MessageStatus'
+   */
+  export type EnumMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MessageStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'MessageStatus[]'
+   */
+  export type ListEnumMessageStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'MessageStatus[]'>
     
   /**
    * Deep Input Types
@@ -6221,6 +6239,7 @@ export namespace Prisma {
     htmlBody?: StringNullableFilter<"Message"> | string | null
     rawObjectKey?: StringNullableFilter<"Message"> | string | null
     rawSizeBytes?: IntNullableFilter<"Message"> | number | null
+    rawHtmlSize?: FloatNullableFilter<"Message"> | number | null
     sizeBytes?: IntFilter<"Message"> | number
     status?: EnumMessageStatusFilter<"Message"> | $Enums.MessageStatus
     isRead?: BoolFilter<"Message"> | boolean
@@ -6243,6 +6262,7 @@ export namespace Prisma {
     htmlBody?: SortOrderInput | SortOrder
     rawObjectKey?: SortOrderInput | SortOrder
     rawSizeBytes?: SortOrderInput | SortOrder
+    rawHtmlSize?: SortOrderInput | SortOrder
     sizeBytes?: SortOrder
     status?: SortOrder
     isRead?: SortOrder
@@ -6268,6 +6288,7 @@ export namespace Prisma {
     htmlBody?: StringNullableFilter<"Message"> | string | null
     rawObjectKey?: StringNullableFilter<"Message"> | string | null
     rawSizeBytes?: IntNullableFilter<"Message"> | number | null
+    rawHtmlSize?: FloatNullableFilter<"Message"> | number | null
     sizeBytes?: IntFilter<"Message"> | number
     status?: EnumMessageStatusFilter<"Message"> | $Enums.MessageStatus
     isRead?: BoolFilter<"Message"> | boolean
@@ -6290,6 +6311,7 @@ export namespace Prisma {
     htmlBody?: SortOrderInput | SortOrder
     rawObjectKey?: SortOrderInput | SortOrder
     rawSizeBytes?: SortOrderInput | SortOrder
+    rawHtmlSize?: SortOrderInput | SortOrder
     sizeBytes?: SortOrder
     status?: SortOrder
     isRead?: SortOrder
@@ -6318,6 +6340,7 @@ export namespace Prisma {
     htmlBody?: StringNullableWithAggregatesFilter<"Message"> | string | null
     rawObjectKey?: StringNullableWithAggregatesFilter<"Message"> | string | null
     rawSizeBytes?: IntNullableWithAggregatesFilter<"Message"> | number | null
+    rawHtmlSize?: FloatNullableWithAggregatesFilter<"Message"> | number | null
     sizeBytes?: IntWithAggregatesFilter<"Message"> | number
     status?: EnumMessageStatusWithAggregatesFilter<"Message"> | $Enums.MessageStatus
     isRead?: BoolWithAggregatesFilter<"Message"> | boolean
@@ -6580,6 +6603,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -6602,6 +6626,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -6622,6 +6647,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -6644,6 +6670,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -6665,6 +6692,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -6684,6 +6712,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -6704,6 +6733,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -7080,6 +7110,17 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type EnumMessageStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.MessageStatus | EnumMessageStatusFieldRefInput<$PrismaModel>
     in?: $Enums.MessageStatus[] | ListEnumMessageStatusFieldRefInput<$PrismaModel>
@@ -7113,6 +7154,7 @@ export namespace Prisma {
     htmlBody?: SortOrder
     rawObjectKey?: SortOrder
     rawSizeBytes?: SortOrder
+    rawHtmlSize?: SortOrder
     sizeBytes?: SortOrder
     status?: SortOrder
     isRead?: SortOrder
@@ -7124,6 +7166,7 @@ export namespace Prisma {
 
   export type MessageAvgOrderByAggregateInput = {
     rawSizeBytes?: SortOrder
+    rawHtmlSize?: SortOrder
     sizeBytes?: SortOrder
   }
 
@@ -7138,6 +7181,7 @@ export namespace Prisma {
     htmlBody?: SortOrder
     rawObjectKey?: SortOrder
     rawSizeBytes?: SortOrder
+    rawHtmlSize?: SortOrder
     sizeBytes?: SortOrder
     status?: SortOrder
     isRead?: SortOrder
@@ -7158,6 +7202,7 @@ export namespace Prisma {
     htmlBody?: SortOrder
     rawObjectKey?: SortOrder
     rawSizeBytes?: SortOrder
+    rawHtmlSize?: SortOrder
     sizeBytes?: SortOrder
     status?: SortOrder
     isRead?: SortOrder
@@ -7169,6 +7214,7 @@ export namespace Prisma {
 
   export type MessageSumOrderByAggregateInput = {
     rawSizeBytes?: SortOrder
+    rawHtmlSize?: SortOrder
     sizeBytes?: SortOrder
   }
 
@@ -7204,6 +7250,22 @@ export namespace Prisma {
     _sum?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedIntNullableFilter<$PrismaModel>
     _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type EnumMessageStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -7394,6 +7456,14 @@ export namespace Prisma {
   }
 
   export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
     set?: number | null
     increment?: number
     decrement?: number
@@ -7612,6 +7682,17 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type NestedEnumMessageStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.MessageStatus | EnumMessageStatusFieldRefInput<$PrismaModel>
     in?: $Enums.MessageStatus[] | ListEnumMessageStatusFieldRefInput<$PrismaModel>
@@ -7652,7 +7733,7 @@ export namespace Prisma {
     _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
-  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel> | null
     in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
     notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
@@ -7660,7 +7741,12 @@ export namespace Prisma {
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumMessageStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -7683,6 +7769,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -7703,6 +7790,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -7753,6 +7841,7 @@ export namespace Prisma {
     htmlBody?: StringNullableFilter<"Message"> | string | null
     rawObjectKey?: StringNullableFilter<"Message"> | string | null
     rawSizeBytes?: IntNullableFilter<"Message"> | number | null
+    rawHtmlSize?: FloatNullableFilter<"Message"> | number | null
     sizeBytes?: IntFilter<"Message"> | number
     status?: EnumMessageStatusFilter<"Message"> | $Enums.MessageStatus
     isRead?: BoolFilter<"Message"> | boolean
@@ -7907,6 +7996,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -7928,6 +8018,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -7963,6 +8054,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -7984,6 +8076,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -8003,6 +8096,7 @@ export namespace Prisma {
     htmlBody?: string | null
     rawObjectKey?: string | null
     rawSizeBytes?: number | null
+    rawHtmlSize?: number | null
     sizeBytes?: number
     status?: $Enums.MessageStatus
     isRead?: boolean
@@ -8022,6 +8116,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -8042,6 +8137,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
@@ -8062,6 +8158,7 @@ export namespace Prisma {
     htmlBody?: NullableStringFieldUpdateOperationsInput | string | null
     rawObjectKey?: NullableStringFieldUpdateOperationsInput | string | null
     rawSizeBytes?: NullableIntFieldUpdateOperationsInput | number | null
+    rawHtmlSize?: NullableFloatFieldUpdateOperationsInput | number | null
     sizeBytes?: IntFieldUpdateOperationsInput | number
     status?: EnumMessageStatusFieldUpdateOperationsInput | $Enums.MessageStatus
     isRead?: BoolFieldUpdateOperationsInput | boolean
