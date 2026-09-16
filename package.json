@@ -12,6 +12,8 @@
     "prisma:format": "npx prisma format --schema=./src/api/v1/prisma/schema.prisma",
     "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma",
     "test": "vitest run"
+    "mailgun:configure-inbound": "node src/scripts/configure-mailgun-inbound-route.js",
+    "mailgun:simulate-webhook": "node src/scripts/simulate-mailgun-webhook.js"
   },
   "keywords": [],
   "author": "",

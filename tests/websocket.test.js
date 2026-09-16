@@ -6,7 +6,7 @@ vi.mock("../src/lib/inboxAccess.js", () => ({
   verifyInboxAccess: vi.fn()
 }));
 
-const { initWebSocket } = await import("../src/configs/websocket.js");
+const { initWebSocket, publishNewMessage } = await import("../src/configs/websocket.js");
 
 const activeServers = [];
 const activeClients = [];
@@ -27,6 +27,19 @@ function waitForSubscription(socket, address, token) {
       }
 
       resolve(response);
+    });
+  });
+}
+
+function waitForMessage(socket, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Timed out waiting for message:new"));
+    }, timeoutMs);
+
+    socket.once("message:new", (message) => {
+      clearTimeout(timeout);
+      resolve(message);
     });
   });
 }
@@ -64,24 +77,61 @@ afterEach(async () => {
   );
 });
 
-describe("WebSocket Connection & Inbox Authentication", () => {
-  it("connects and successfully joins an inbox room with valid credentials", async () => {
-    const { port, accessChecker } = await createTestServer();
-    const client = createClient(`http://localhost:${port}`, {
+describe("WebSocket Real-Time Message Push & Isolation", () => {
+  it("delivers a new message only to the matching inbox within three seconds", async () => {
+    const { io, port, accessChecker } = await createTestServer();
+    const clientA = createClient(`http://localhost:${port}`, {
       transports: ["websocket"]
     });
-    activeClients.push(client);
+    const clientB = createClient(`http://localhost:${port}`, {
+      transports: ["websocket"]
+    });
+    activeClients.push(clientA, clientB);
 
-    await waitForConnection(client);
+    await Promise.all([waitForConnection(clientA), waitForConnection(clientB)]);
 
     await expect(
-      waitForSubscription(client, "FIRST@TEMP.COM", "valid-token")
+      waitForSubscription(clientA, "FIRST@TEMP.COM", "valid-token")
     ).resolves.toEqual({
       success: true,
       room: "inbox:inbox-1"
     });
+      
+    wait expect(
+      waitForSubscription(clientB, "second@temp.com", "valid-token")
+    ).resolves.toEqual({
+      success: true,
+      room: "inbox:inbox-2"
+    });
 
-    expect(accessChecker).toHaveBeenCalledWith("first@temp.com", "valid-token");
+    expect(accessChecker).toHaveBeenNthCalledWith(
+      1,
+      "first@temp.com",
+      "valid-token"
+    );
+
+    const clientAMessage = waitForMessage(clientA);
+    let clientBReceivedMessage = false;
+    clientB.once("message:new", () => {
+      clientBReceivedMessage = true;
+    });
+
+    publishNewMessage(io, "inbox-1", {
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code",
+      receivedAt: new Date().toISOString()
+    });
+
+    await expect(clientAMessage).resolves.toMatchObject({
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code"
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(clientBReceivedMessage).toBe(false);
+    
   });
 
   it("rejects an invalid token without joining a room", async () => {
@@ -110,5 +160,39 @@ describe("WebSocket Connection & Inbox Authentication", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(client.connected).toBe(false);
+    await expect(
+      waitForSubscription(clientB, "second@temp.com", "valid-token")
+    ).resolves.toEqual({
+      success: true,
+      room: "inbox:inbox-2"
+    });
+
+    expect(accessChecker).toHaveBeenNthCalledWith(
+      1,
+      "first@temp.com",
+      "valid-token"
+    );
+
+    const clientAMessage = waitForMessage(clientA);
+    let clientBReceivedMessage = false;
+    clientB.once("message:new", () => {
+      clientBReceivedMessage = true;
+    });
+
+    publishNewMessage(io, "inbox-1", {
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code",
+      receivedAt: new Date().toISOString()
+    });
+
+    await expect(clientAMessage).resolves.toMatchObject({
+      id: "message-1",
+      fromAddress: "sender@example.com",
+      subject: "Verification code"
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(clientBReceivedMessage).toBe(false);
   });
 });
