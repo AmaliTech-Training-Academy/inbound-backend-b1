@@ -1,4 +1,4 @@
-import { canonicalizeRecipient } from "../../../utils/emailAddress.js";
+import { canonicalizeRecipient } from "../../../lib/emailAddress.js";
 import { verifyMailgunSignature } from "./mailgunSignatureService.js";
 import { parseInboundEmail, sanitizeHtmlBody } from "./mailParserService.js";
 
