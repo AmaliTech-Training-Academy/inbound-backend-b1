@@ -97,7 +97,7 @@ describe("WebSocket Real-Time Message Push & Isolation", () => {
       room: "inbox:inbox-1"
     });
       
-    wait expect(
+    await expect(
       waitForSubscription(clientB, "second@temp.com", "valid-token")
     ).resolves.toEqual({
       success: true,
