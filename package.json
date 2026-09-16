@@ -11,7 +11,7 @@
     "prisma:studio": "npx prisma studio --port=10129",
     "prisma:format": "npx prisma format --schema=./src/api/v1/prisma/schema.prisma",
     "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma",
-    "test": "vitest run"
+    "test": "vitest run",
     "mailgun:configure-inbound": "node src/scripts/configure-mailgun-inbound-route.js",
     "mailgun:simulate-webhook": "node src/scripts/simulate-mailgun-webhook.js"
   },
@@ -34,13 +34,13 @@
     "sanitize-html": "^2.17.7",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.3.0",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "vitest": "^4.1.11"
   },
   "devDependencies": {
     "dotenv": "^17.4.2",
     "nodemon": "^3.1.14",
     "prisma": "^7.10.0",
-    "socket.io-client": "^4.8.3",
-    "vitest": "^5.0.0"
+    "socket.io-client": "^4.8.3"
   }
 }

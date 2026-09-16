@@ -145,6 +145,7 @@ exports.Prisma.MessageScalarFieldEnum = {
   htmlBody: 'htmlBody',
   rawObjectKey: 'rawObjectKey',
   rawSizeBytes: 'rawSizeBytes',
+  rawHtmlSize: 'rawHtmlSize',
   sizeBytes: 'sizeBytes',
   status: 'status',
   isRead: 'isRead',

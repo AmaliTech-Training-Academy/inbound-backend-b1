@@ -3,9 +3,27 @@ import sanitizeHtml from "sanitize-html";
 
 const ALLOWED_TAGS = [
     "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3",
-    "hr", "img", "li", "ol", "p", "pre", "span", "strong", "table", "tbody",
+    "hr", "li", "ol", "p", "pre", "span", "strong", "table", "tbody",
     "td", "th", "thead", "tr", "u", "ul",
 ];
+
+export function sanitizeHtmlBody(html) {
+    return sanitizeHtml(html || "", {
+        allowedTags: ALLOWED_TAGS,
+        allowedAttributes: {
+            a: ["href", "name", "target"],
+            "*": ["class"],
+        },
+        allowedSchemes: ["http", "https", "mailto"],
+        disallowedTagsMode: "discard",
+        transformTags: {
+            a: sanitizeHtml.simpleTransform("a", {
+                rel: "noopener noreferrer",
+                target: "_blank",
+            }, true),
+        },
+    });
+}
 
 export async function parseInboundEmail(rawEmail){
     const parsedEmail = await simpleParser(rawEmail, {
@@ -14,22 +32,7 @@ export async function parseInboundEmail(rawEmail){
     });
     
     const rawHtml = parsedEmail.html || "";
-    const htmlBody = rawHtml ? sanitizeHtml(rawHtml,{
-        allowedTags: ALLOWED_TAGS,
-        allowedAttributes: {
-            a: ["href", "name", "target"],
-            img: ["src", "alt"],
-            "*": ["class"],
-        },
-        allowedSchemes: ["http", "https", "mailto"],
-        disallowedTagsMode: "discard",
-        transformTags:{
-            a: sanitizeHtml.simpleTransform("a",{
-                rel: "noopener noreferrer",
-                target: "_blank"
-            },true)
-        }
-    }) : "";
+    const htmlBody = sanitizeHtmlBody(rawHtml);
 
     return {
         fromAddress: parsedEmail.from?.value?.[0]?.address?.toLowerCase() || "unknown",

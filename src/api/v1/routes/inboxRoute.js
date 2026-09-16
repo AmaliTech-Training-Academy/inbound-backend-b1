@@ -1,6 +1,7 @@
 import express from 'express'
 import { createInbox, getInboxInfo, extendInboxTime } from '../controllers/inboxController.js';
 import { requireInboxAccess } from '../../../middlewares/requireInboxAccess.js';
+import { messageRouter } from './messageRoute.js';
 
 const router = express.Router();
 
@@ -17,6 +18,8 @@ router.patch('/extend',
     requireInboxAccess,
     extendInboxTime
 )
+
+router.use('/messages', messageRouter);
 
 
 

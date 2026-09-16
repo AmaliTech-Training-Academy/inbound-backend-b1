@@ -1,6 +1,6 @@
 import { canonicalizeRecipient } from "../../../utils/emailAddress.js";
 import { verifyMailgunSignature } from "./mailgunSignatureService.js";
-import { parseInboundEmail } from "./mailParserService.js";
+import { parseInboundEmail, sanitizeHtmlBody } from "./mailParserService.js";
 
 const MAX_ATTACHMENT_BYTES = Number(process.env.MAX_ATTACHMENT_SIZE_MB || 10) * 1024 * 1024
 const MAX_MESSAGE_BYTES = Number(process.env.MAX_MESSAGE_SIZE_MB || 25) * 1024 * 1024
@@ -65,7 +65,7 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
             fromName: getName(body.from),
             subject: body.subject || "No Subject",
             textBody: body["body-plain"] || "",
-            htmlBody: body["body-html"] || "",
+            htmlBody: sanitizeHtmlBody(body["body-html"] || ""),
             attachments: [],
         };
     const attachmentBytes = parsed.attachments.reduce((total,item)=>total + item.sizeBytes,0)
