@@ -10,7 +10,8 @@
     "prisma:generate": "npx prisma generate --schema=./src/api/v1/prisma/schema.prisma",
     "prisma:studio": "npx prisma studio --port=10129",
     "prisma:format": "npx prisma format --schema=./src/api/v1/prisma/schema.prisma",
-    "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma"
+    "prisma:push": "npx prisma db push --schema=./src/api/v1/prisma/schema.prisma",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +30,8 @@
   "devDependencies": {
     "dotenv": "^17.4.2",
     "nodemon": "^3.1.14",
-    "prisma": "^7.10.0"
+    "prisma": "^7.10.0",
+    "socket.io-client": "^4.8.3",
+    "vitest": "^5.0.0"
   }
 }
