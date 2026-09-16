@@ -48,6 +48,7 @@ model Message {
 
   rawObjectKey String?
   rawSizeBytes Int?
+  rawHtmlSize Float?
 
   sizeBytes Int @default(0)
 
