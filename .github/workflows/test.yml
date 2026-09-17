@@ -2,9 +2,10 @@ name: Backend Tests
 
 on:
   push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
+    branches: [main, dev,feat/github-actions] #remove the temp feat/github-actions branch after the PR is merged
+  # pull_request:
+  #   branches: [main, dev,feat/github-actions]
+     #remove the temp feat/github-actions branch after the PR is merged
 
 permissions:
   contents: read
