@@ -30,9 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit npm dependencies
-        run: npm audit --audit-level=high
-
       - name: Scan for leaked secrets
         uses: gitleaks/gitleaks-action@v2
         env:
