@@ -1,675 +1,706 @@
-# Temp Inbox Service — API Documentation
+# Inbound Email API
 
-A disposable/temporary email inbox platform. Users generate a throwaway address, receive mail in real time over WebSockets, view sanitized message bodies + attachments, and let inboxes auto-expire and hard-delete.
+Formal technical documentation for the temporary inbound-email service in this repository.
 
-**Stack:** Express · PostgreSQL · Prisma · ws (WebSockets) · Redis · BullMQ · mailparser · S3/R2 · Zod · node-cron · Docker · OpenAPI/Swagger · Cloudflare/Nginx (reverse proxy for inbound mail)
+The service creates short-lived email inboxes, accepts inbound Mailgun messages, parses and sanitizes email content, stores message metadata in PostgreSQL through Prisma, and exposes the inbox through a REST API. Socket.IO support is included for inbox subscriptions.
 
-**Language:** JavaScript only (no TypeScript). Zod is used for runtime request/response validation instead of static types.
+## 1. Product Scope
 
----
+### Implemented
 
-## 1. High-Level Architecture
+- Temporary inbox creation with generated email addresses.
+- Bearer-token access to an inbox and its messages.
+- Inbox expiration and fixed five-minute extensions.
+- Mailgun raw-MIME webhook ingestion.
+- Mailgun signature verification with a five-minute freshness window.
+- MIME parsing with `mailparser`.
+- HTML sanitization with an explicit allowlist of tags, attributes, and URL schemes.
+- Message and attachment metadata persistence in PostgreSQL through Prisma.
+- Socket.IO room subscriptions scoped to an inbox.
+- Swagger UI at `/api-docs`.
+- Vitest unit tests for message-controller behavior and Socket.IO behavior.
 
-```
-                        ┌────────────────────┐
-   Inbound email  ───▶  │ Cloudflare / Nginx │  (MX + inbound-parse webhook,
-   (SMTP / MX)          │  reverse proxy      │   or local dev SMTP server)
-                        └─────────┬──────────┘
-                                  │ POST /webhooks/inbound-email
-                                  ▼
-                        ┌────────────────────┐        ┌───────────────┐
-                        │   Express API       │──────▶ │  PostgreSQL   │
-                        │  (REST + Auth)       │        │  (Prisma)     │
-                        └─────────┬──────────┘        └───────────────┘
-                                  │ enqueue "parse-email" job
-                                  ▼
-                        ┌────────────────────┐        ┌───────────────┐
-                        │  BullMQ Worker       │──────▶ │  Redis        │
-                        │ (mailparser, sanitize│        │ (queue/state) │
-                        │  HTML, store blobs)  │        └───────────────┘
-                                  │                          │
-                                  ▼                          │
-                        ┌────────────────────┐               │
-                        │ S3 / Cloudflare R2  │               │
-                        │ (attachment blobs)  │               │
-                        └────────────────────┘               │
-                                  │                            │
-                                  ▼                            │
-                        ┌────────────────────┐                 │
-                        │  WebSocket Server    │◀────publish────┘
-                        │ (per-inbox channels) │   (Redis pub/sub)
-                        └─────────┬──────────┘
-                                  ▼
-                             Frontend client
+### Not implemented
 
-                        ┌────────────────────┐
-                        │ node-cron worker     │──▶ hard-deletes expired
-                        │ (expiry sweep)        │    inboxes/messages/attachments
-                        └────────────────────┘
+The current codebase does not implement outbound email, background cleanup, Redis/BullMQ workers, object-storage uploads, signed attachment downloads, pagination, inbox deletion endpoints, or automatic publication of ingested messages to Socket.IO clients.
+
+Attachment records contain an `objectKey`, but attachment bytes are not uploaded to object storage by the current ingestion service.
+
+## 2. Runtime Architecture
+
+```text
+Mail provider or simulator
+          |
+          | POST multipart/form-data
+          v
+Express HTTP server :9001
+          |
+          +--> Mailgun signature validation
+          +--> Recipient and inbox validation
+          +--> MIME parsing and HTML sanitization
+          +--> PostgreSQL through Prisma
+          |
+          +--> Socket.IO server on the same HTTP server
 ```
 
-No outbound-send path exists anywhere in this system by design (T10 requirement).
+The application is an ES module Node.js service. It listens on `0.0.0.0` and defaults to port `9001`.
 
----
+When traffic passes through ngrok, Cloudflare, Nginx, or another reverse proxy, the deployment must match the Express `trust proxy` setting. The current application sets one trusted proxy hop. Change that value to match the real production topology and ensure the proxy manages `X-Forwarded-For` correctly.
 
-## 2. Database Schema (Prisma)
+## 3. Base URLs and Response Format
 
-```prisma
-// schema.prisma
-generator client {
-  provider = "prisma-client-js"
-}
+Local base URL:
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model Inbox {
-  id         String     @id @default(uuid())
-  address    String     @unique              // e.g. "swift-otter-482@tempmail.dev"
-  localPart  String                          // "swift-otter-482" (indexed for regen retries)
-  domain     String                          // "tempmail.dev"
-  token      String     @unique              // bearer token to manage this inbox from frontend
-  createdAt  DateTime   @default(now())
-  expiresAt  DateTime                        // extendable
-  lastExtendedAt DateTime?
-  extendCount    Int    @default(0)          // cap extensions to prevent indefinite inboxes
-  isDeleted  Boolean    @default(false)      // soft flag before hard delete sweep
-  messages   Message[]
-
-  @@index([expiresAt])
-  @@index([address])
-}
-
-Inbox Model Purpose: represents one disposable email address and its lifecycle.
-
-model Message {
-  id           String       @id @default(uuid())
-  inboxId      String
-  inbox        Inbox        @relation(fields: [inboxId], references: [id], onDelete: Cascade)
-
-  fromAddress  String
-  fromName     String?
-  toAddress    String
-  subject      String?
-  textBody     String?      // plain text
-  htmlBody     String?      // sanitized HTML (safe to render)
-  rawHtmlSize  Int?         // bytes, pre-sanitization, for auditing
-  rawObjectKey String?      // S3/R2 key of the original raw .eml, for debugging/reprocessing
-
-  status       MessageStatus @default(PENDING) // PENDING -> PARSED -> FAILED
-  receivedAt   DateTime     @default(now())
-  expiresAt    DateTime                        // inherited from inbox at ingestion time
-  sizeBytes    Int          @default(0)
-
-  attachments  Attachment[]
-
-  @@index([inboxId, receivedAt])
-  @@index([expiresAt])
-}
-
-enum MessageStatus {
-  PENDING
-  PARSED
-  FAILED
-}
-
-Message Model Purpose: represents one received, parsed email.
-
-model Attachment {
-  id           String   @id @default(uuid())
-  messageId    String
-  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  filename     String
-  contentType  String
-  sizeBytes    Int
-  objectKey    String   // S3/R2 storage key
-  checksum     String?  // sha256, for de-dup / integrity check
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime // mirrors parent message expiry
-
-  @@index([messageId])
-  @@index([expiresAt])
-}
-
-Attachment Model Purpose: represents one file attached to a message.
-
-model IngestLog {
-  id            String   @id @default(uuid())
-  rawObjectKey  String?
-  recipient     String
-  accepted      Boolean
-  rejectReason  String?
-  createdAt     DateTime @default(now())
-
-  @@index([createdAt])
-}
-
-IngestLog Model Purpose: an audit trail for the mail-ingestion endpoint (T4) — separate from Message because it logs every inbound attempt, including ones that get rejected (unknown recipient, expired inbox, malformed payload).
+```text
+http://localhost:9001
 ```
 
-### Field type summary (for frontend contracts)
+REST API base path:
 
-| Model | Field | Type | Notes |
-|---|---|---|---|
-| Inbox | id | UUID string | primary key |
-| Inbox | address | string | full email address |
-| Inbox | token | string (secret) | only returned once, on creation |
-| Inbox | createdAt / expiresAt / lastExtendedAt | ISO 8601 string | |
-| Inbox | extendCount | integer | |
-| Message | fromAddress, toAddress | string | |
-| Message | subject, fromName | string \| null | |
-| Message | textBody, htmlBody | string \| null | htmlBody is sanitized |
-| Message | status | enum: `PENDING`\|`PARSED`\|`FAILED` | |
-| Message | sizeBytes | integer | |
-| Attachment | filename, contentType | string | |
-| Attachment | sizeBytes | integer | enforce max (e.g. 10 MB/file, 25 MB/message) |
-| Attachment | objectKey | string | never exposed raw; served via signed download URL |
-
----
-
-## 3. Environment Variables
-
-```
-# App
-PORT=3000
-NODE_ENV=production
-APP_BASE_URL=https://tempmail.dev
-INBOX_DOMAIN=tempmail.dev
-JWT_OR_TOKEN_SECRET=<random-256-bit>
-
-# Postgres
-DATABASE_URL=postgresql://user:pass@postgres:5432/tempmail
-
-# Redis / BullMQ
-REDIS_URL=redis://redis:6379
-
-# Object storage (S3-compatible / Cloudflare R2)
-S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
-S3_BUCKET=tempmail-attachments
-S3_ACCESS_KEY_ID=...
-S3_SECRET_ACCESS_KEY=...
-S3_REGION=auto
-
-# Inbound mail
-INBOUND_PROVIDER=postmark|mailgun|sendgrid|local-smtp
-INBOUND_WEBHOOK_SECRET=<verifies signature of inbound-parse POST>
-LOCAL_SMTP_PORT=2525   # only used in dev mode
-
-# Limits
-DEFAULT_INBOX_TTL_MINUTES=30
-MAX_EXTENDS=3
-EXTEND_TTL_MINUTES=15
-MAX_ATTACHMENT_SIZE_MB=10
-MAX_MESSAGE_SIZE_MB=25
-
-# Cleanup
-CLEANUP_CRON="*/5 * * * *"
+```text
+/api/v1
 ```
 
----
+Successful responses generally use:
 
-## 4. REST API
-
-Base URL: `/api/v1`
-All responses are JSON. Errors follow:
-```json
-{ "error": { "code": "INBOX_NOT_FOUND", "message": "Inbox does not exist or has expired." } }
-```
-
-Auth model: creating an inbox returns a **token**. Mutating/reading a specific inbox (`GET`, `extend`, `DELETE`) requires either the token in `Authorization: Bearer <token>` header, or the inbox `id` if you treat it as capability-based (recommend token-based for stronger guessing-resistance).
-
-### 4.1 `POST /inboxes`
-Generate a new disposable inbox.
-
-**Request body (Zod: `createInboxSchema`)**
-```js
-z.object({
-  ttlMinutes: z.number().int().min(5).max(120).optional(), // default DEFAULT_INBOX_TTL_MINUTES
-  preferredLocalPart: z.string().min(3).max(30).regex(/^[a-z0-9-]+$/).optional() // best-effort, falls back to random on collision
-})
-```
-
-**Response `201`**
 ```json
 {
-  "id": "b6e1...",
-  "address": "swift-otter-482@tempmail.dev",
-  "token": "tmi_9f2c...",   // shown ONLY here — store client-side
-  "createdAt": "2026-09-09T10:00:00.000Z",
-  "expiresAt": "2026-09-09T10:30:00.000Z"
+  "success": true,
+  "message": "Description of the result",
+  "data": {}
 }
 ```
 
-### 4.2 `GET /inboxes/:id`
-Fetch inbox metadata + its messages (paginated).
+Error responses generally use:
 
-**Auth:** Bearer token required.
-
-**Query params:** `?cursor=<messageId>&limit=20`
-
-**Response `200`**
 ```json
 {
-  "id": "b6e1...",
-  "address": "swift-otter-482@tempmail.dev",
-  "createdAt": "2026-09-09T10:00:00.000Z",
-  "expiresAt": "2026-09-09T10:30:00.000Z",
-  "extendCount": 0,
-  "messages": [
-    {
-      "id": "m1...",
-      "fromAddress": "no-reply@github.com",
-      "fromName": "GitHub",
-      "subject": "Verify your email",
-      "receivedAt": "2026-09-09T10:05:00.000Z",
-      "hasAttachments": false,
-      "status": "PARSED"
+  "success": false,
+  "message": "Description of the failure"
+}
+```
+
+Dates are serialized by Express as ISO 8601 strings. UUIDs are returned as strings.
+
+## 4. HTTP Endpoints
+
+### 4.1 Service information
+
+```http
+GET /
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "The multiverse would never forgive me if I complied....",
+  "data": {
+    "service": "inbound-api",
+    "version": "1.0.0"
+  }
+}
+```
+
+### 4.2 Health check
+
+```http
+GET /api/v1/health
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "API is healthy."
+}
+```
+
+This endpoint confirms that the Express process is responding. It does not perform a database, Mailgun, or Socket.IO readiness check.
+
+### 4.3 Create an inbox
+
+```http
+POST /api/v1/inbox
+```
+
+No request body is required.
+
+The service:
+
+1. Generates a cryptographically random token.
+2. Stores only the SHA-256 hash of that token.
+3. Generates a randomized local part from name-based patterns, letters, digits, and a uniqueness suffix.
+4. Creates the address using `DOMAIN_ADDRESS`.
+5. Sets expiration using `INBOX_TTL_MINUTES`.
+
+Response `201`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
+    "address": "generated-address@example.com",
+    "token": "raw-token-returned-once",
+    "expiresAt": "2026-09-16T14:00:00.000Z"
+  }
+}
+```
+
+The raw token is returned only in this response. Clients should store it securely and send it as a bearer token for subsequent inbox operations.
+
+Possible failure: `500` when address creation or persistence fails.
+
+### 4.4 Fetch inbox information
+
+```http
+GET /api/v1/inbox/info
+Authorization: Bearer <token>
+```
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Inbox Fetched Success",
+  "data": {
+    "address": "generated-address@example.com",
+    "localPart": "generated-address",
+    "extendCount": 0,
+    "domain": "example.com",
+    "createdAt": "2026-09-16T13:00:00.000Z",
+    "expiresAt": "2026-09-16T14:00:00.000Z",
+    "message": {
+      "count": 0
     }
-  ],
-  "nextCursor": null
+  }
 }
 ```
-`404 INBOX_NOT_FOUND` if missing/expired/deleted.
 
-### 4.3 `GET /inboxes/:id/messages/:messageId`
-Full message detail including sanitized `htmlBody`, `textBody`, and attachment metadata.
+The route authenticates by hashing the supplied token and comparing it with `Inbox.tokenHash`. It does not accept an inbox ID or query parameter.
 
-**Response `200`**
+Possible failures:
+
+- `401` when the authorization header is missing or malformed.
+- `404` when the inbox cannot be found or is deleted.
+- `410` when the inbox has expired.
+- `500` for an unexpected database or server error.
+
+### 4.5 Extend inbox expiration
+
+```http
+PATCH /api/v1/inbox/extend
+Authorization: Bearer <token>
+```
+
+No request body is required. Each successful call adds exactly five minutes to the current expiration time and increments `extendCount`.
+
+Response `200`:
+
 ```json
 {
-  "id": "m1...",
-  "fromAddress": "no-reply@github.com",
-  "fromName": "GitHub",
-  "toAddress": "swift-otter-482@tempmail.dev",
-  "subject": "Verify your email",
-  "textBody": "Click the link below...",
-  "htmlBody": "<div>...(sanitized)...</div>",
-  "receivedAt": "2026-09-09T10:05:00.000Z",
-  "attachments": [
-    { "id": "a1...", "filename": "invoice.pdf", "contentType": "application/pdf", "sizeBytes": 48213 }
-  ]
+  "success": true,
+  "message": "Inbox time extended successfully",
+  "data": {
+    "expiresAt": "2026-09-16T14:05:00.000Z",
+    "lastExtendedAt": "2026-09-16T14:00:00.000Z",
+    "extendCount": 1
+  }
 }
 ```
 
-### 4.4 `POST /inboxes/:id/extend`
-Extend expiry. Capped by `MAX_EXTENDS`.
+The current implementation does not enforce a maximum extension count and rejects expired inboxes in the access middleware before this controller runs.
 
-**Request body**
-```js
-z.object({ extendMinutes: z.number().int().min(5).max(60).optional() }) // default EXTEND_TTL_MINUTES
+### 4.6 Fetch a message
+
+```http
+GET /api/v1/inbox/messages/:id
+Authorization: Bearer <token>
 ```
 
-**Response `200`**
+The message must belong to the inbox represented by the bearer token.
+
+Response `200`:
+
 ```json
-{ "id": "b6e1...", "expiresAt": "2026-09-09T10:45:00.000Z", "extendCount": 1 }
-```
-`409 EXTEND_LIMIT_REACHED` once `extendCount >= MAX_EXTENDS`.
-
-### 4.5 `DELETE /inboxes/:id`
-Immediate hard delete (cascades to messages/attachments, removes S3 objects).
-
-**Response:** `204 No Content`
-
-### 4.6 `GET /inboxes/:id/messages/:messageId/attachments/:attachmentId`
-Returns a short-lived signed download URL rather than streaming the file directly through the API process.
-
-**Response `200`**
-```json
-{ "downloadUrl": "https://r2.../invoice.pdf?X-Amz-Expires=300&...", "expiresIn": 300 }
-```
-
-### 4.7 `POST /webhooks/inbound-email` (internal, provider-facing)
-Receives inbound-parse payload (or local SMTP handoff translated into the same shape). Not part of the public/frontend API — protected by `INBOUND_WEBHOOK_SECRET` signature verification, not user auth.
-
-**Request:** raw MIME (`multipart/form-data` or raw body depending on provider) containing recipient, sender, and message payload.
-
-**Behavior:**
-1. Verify webhook signature.
-2. Resolve `recipient` → active, non-expired `Inbox`. If not found: log to `IngestLog` with `accepted: false`, respond `200` anyway (avoid provider retry storms) or `404` for local SMTP mode.
-3. Store raw MIME to object storage (`rawObjectKey`), create `Message` row with `status: PENDING`.
-4. Enqueue `parse-email` BullMQ job with `{ messageId, rawObjectKey }`.
-5. Respond `202 Accepted`.
-
-### 4.8 `GET /healthz`
-Liveness/readiness probe for Docker/orchestrator. Checks DB + Redis connectivity.
-
----
-
-## 5. Zod Schemas (shared validation layer)
-
-```js
-// src/validation/inbox.schema.js
-import { z } from 'zod';
-
-export const createInboxSchema = z.object({
-  ttlMinutes: z.number().int().min(5).max(120).optional(),
-  preferredLocalPart: z.string().min(3).max(30).regex(/^[a-z0-9-]+$/).optional(),
-});
-
-export const extendInboxSchema = z.object({
-  extendMinutes: z.number().int().min(5).max(60).optional(),
-});
-
-export const paginationSchema = z.object({
-  cursor: z.string().uuid().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-export const inboundEmailSchema = z.object({
-  recipient: z.string().email(),
-  sender: z.string().email(),
-  subject: z.string().optional(),
-  rawMime: z.string(), // base64 or raw text depending on provider
-});
-```
-
-Express middleware pattern:
-```js
-export const validate = (schema, source = 'body') => (req, res, next) => {
-  const result = schema.safeParse(req[source]);
-  if (!result.success) {
-    return res.status(400).json({
-      error: { code: 'VALIDATION_ERROR', message: result.error.issues[0].message, issues: result.error.issues },
-    });
-  }
-  req[source] = result.data;
-  next();
-};
-```
-
----
-
-## 6. Address Generator (T3)
-
-```js
-// src/services/addressGenerator.js
-import { customAlphabet } from 'nanoid';
-import prisma from '../db/prisma.js';
-
-const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 10);
-const MAX_RETRIES = 5;
-
-export async function generateUniqueAddress(domain, preferredLocalPart) {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const localPart = attempt === 0 && preferredLocalPart
-      ? `${preferredLocalPart}-${nanoid(4)}`
-      : nanoid();
-    const address = `${localPart}@${domain}`;
-    const existing = await prisma.inbox.findUnique({ where: { address } });
-    if (!existing) return { address, localPart };
-  }
-  throw new Error('ADDRESS_GENERATION_FAILED');
-}
-```
-Uniqueness is enforced both at the application level (retry loop) and the database level (`@unique` constraint) to close the race-condition window.
-
----
-
-## 7. WebSocket Protocol (T7)
-
-**Connect:** `wss://tempmail.dev/ws?inboxId=<id>&token=<token>`
-
-Server validates token against the inbox, subscribes the socket to a Redis pub/sub channel named `inbox:<id>`. When the BullMQ worker finishes parsing a message, it publishes to that channel; the WS server relays to all connected sockets for that inbox.
-
-**Server → Client events**
-```json
-{ "type": "message:new", "payload": { "id": "m1...", "fromAddress": "...", "subject": "...", "receivedAt": "..." } }
-```
-```json
-{ "type": "inbox:expiring_soon", "payload": { "expiresAt": "2026-09-09T10:30:00.000Z" } }
-```
-```json
-{ "type": "inbox:expired", "payload": { "id": "b6e1..." } }
-```
-
-**Client → Server events**
-```json
-{ "type": "ping" }
-```
-```json
-{ "type": "subscribe", "payload": { "inboxId": "b6e1...", "token": "tmi_..." } }
-```
-
-Reconnect strategy on the frontend: exponential backoff, re-`subscribe` on reconnect, and reconcile by re-fetching `GET /inboxes/:id` in case events were missed while disconnected.
-
----
-
-## 8. Background Jobs
-
-### 8.1 BullMQ — `parse-email` queue (T5)
-```js
-// src/queues/parseEmail.worker.js
-import { Worker } from 'bullmq';
-import { simpleParser } from 'mailparser';
-import sanitizeHtml from 'sanitize-html';
-
-new Worker('parse-email', async (job) => {
-  const { messageId, rawObjectKey } = job.data;
-  const raw = await downloadFromObjectStorage(rawObjectKey);
-  const parsed = await simpleParser(raw);
-
-  const safeHtml = parsed.html
-    ? sanitizeHtml(parsed.html, { allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']), allowedSchemes: ['http','https','mailto','data'] })
-    : null;
-
-  const attachments = [];
-  for (const att of parsed.attachments ?? []) {
-    if (att.size > MAX_ATTACHMENT_SIZE_BYTES) continue; // enforce limit
-    const objectKey = await uploadToObjectStorage(att.content, att.filename, att.contentType);
-    attachments.push({ filename: att.filename, contentType: att.contentType, sizeBytes: att.size, objectKey, checksum: sha256(att.content) });
-  }
-
-  await persistParsedMessage({ messageId, from: parsed.from, subject: parsed.subject, text: parsed.text, html: safeHtml, attachments });
-  await redisPublish(`inbox:${inboxIdFor(messageId)}`, { type: 'message:new', payload: {/* summary */} });
-}, { connection: redisConnection, concurrency: 5 });
-```
-
-### 8.2 node-cron — expiry sweep (T8)
-```js
-// src/jobs/cleanup.cron.js
-import cron from 'node-cron';
-
-cron.schedule(process.env.CLEANUP_CRON, async () => {
-  const now = new Date();
-  const expiredInboxes = await prisma.inbox.findMany({ where: { expiresAt: { lt: now } }, select: { id: true } });
-
-  for (const { id } of expiredInboxes) {
-    const attachments = await prisma.attachment.findMany({ where: { message: { inboxId: id } } });
-    await Promise.all(attachments.map((a) => deleteFromObjectStorage(a.objectKey)));
-    await prisma.inbox.delete({ where: { id } }); // cascades Message + Attachment rows
-  }
-});
-```
-
----
-
-## 9. Frontend Integration Contract
-
-Minimal client-facing surface the frontend needs:
-
-| Action | Endpoint | Notes |
-|---|---|---|
-| Generate address | `POST /inboxes` | store `token` + `id` in memory/localStorage |
-| List/poll inbox | `GET /inboxes/:id` | used for initial load / reconnect reconciliation |
-| Live updates | `WSS /ws?inboxId&token` | primary channel for new mail |
-| Read message | `GET /inboxes/:id/messages/:messageId` | render `htmlBody` in a **sandboxed iframe** (`sandbox="allow-same-origin"` only, no scripts) even though it's server-sanitized |
-| Download attachment | `GET .../attachments/:attachmentId` | returns signed URL, not the file itself |
-| Extend | `POST /inboxes/:id/extend` | disable button once `extendCount === MAX_EXTENDS` |
-| New address | `POST /inboxes` again | discard old token/socket, open new WS subscription |
-
-Suggested frontend state shape (framework-agnostic):
-```js
 {
-  inbox: { id, address, token, createdAt, expiresAt, extendCount },
-  messages: [ { id, fromAddress, fromName, subject, receivedAt, status, hasAttachments } ],
-  activeMessage: { /* full detail incl. htmlBody/textBody/attachments */ } | null,
-  connectionStatus: 'connecting' | 'open' | 'closed'
+  "success": true,
+  "message": "Message Fetched Success",
+  "data": {
+    "id": "message-uuid",
+    "subject": "Verification code",
+    "sender": "Example Sender <sender@example.com>",
+    "from": "sender@example.com",
+    "to": "generated-address@example.com",
+    "body": "<p>Sanitized message body</p>",
+    "inboxId": "inbox-uuid",
+    "attachments": [
+      {
+        "id": "attachment-uuid",
+        "filename": "document.pdf",
+        "contentType": "application/pdf",
+        "size": 48213,
+        "url": "mailgun:token:document.pdf",
+        "expiresAt": "2026-09-16T14:00:00.000Z"
+      }
+    ],
+    "isRead": false,
+    "status": "PARSED",
+    "receivedAt": "2026-09-16T13:10:00.000Z",
+    "expiresAt": "2026-09-16T14:00:00.000Z"
+  }
 }
 ```
 
----
+HTML is sanitized again when the message is read. The `url` value is currently an object-key value, not a downloadable HTTP URL.
 
-## 10. OpenAPI / Swagger
+Possible failures: `400` for missing parameters, `401` for missing or invalid authorization, `404` for a missing inbox or message, `410` for an expired inbox, and `500` for an unexpected server error.
 
-Serve interactive docs at `GET /docs` via `swagger-ui-express`, generated from `openapi.yaml`:
+### 4.7 Mark a message as read
 
-```yaml
-openapi: 3.0.3
-info:
-  title: Temp Inbox API
-  version: 1.0.0
-servers:
-  - url: /api/v1
-paths:
-  /inboxes:
-    post:
-      summary: Create a disposable inbox
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                ttlMinutes: { type: integer, minimum: 5, maximum: 120 }
-                preferredLocalPart: { type: string }
-      responses:
-        '201':
-          description: Inbox created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id: { type: string, format: uuid }
-                  address: { type: string }
-                  token: { type: string }
-                  createdAt: { type: string, format: date-time }
-                  expiresAt: { type: string, format: date-time }
-  /inboxes/{id}:
-    get:
-      summary: Get inbox + messages
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        '200': { description: OK }
-        '404': { description: Not found or expired }
-    delete:
-      summary: Delete inbox immediately
-      security: [{ bearerAuth: [] }]
-      responses:
-        '204': { description: Deleted }
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-```
-(Full spec would enumerate every route in section 4; kept abbreviated here.)
-
----
-
-## 11. Project Structure
-
-```
-temp-inbox/
-├── docker-compose.yml
-├── Dockerfile
-├── openapi.yaml
-├── prisma/
-│   └── schema.prisma
-├── src/
-│   ├── app.js
-│   ├── server.js                # http + ws upgrade
-│   ├── config/env.js
-│   ├── db/prisma.js
-│   ├── redis/client.js
-│   ├── routes/
-│   │   ├── inboxes.routes.js
-│   │   ├── messages.routes.js
-│   │   └── webhooks.routes.js
-│   ├── controllers/
-│   ├── services/
-│   │   ├── addressGenerator.js
-│   │   ├── objectStorage.js
-│   │   └── mailIngest.js
-│   ├── validation/*.schema.js
-│   ├── queues/
-│   │   ├── parseEmail.queue.js
-│   │   └── parseEmail.worker.js
-│   ├── jobs/cleanup.cron.js
-│   ├── ws/server.js
-│   └── middleware/{auth,validate,errorHandler}.js
-├── tests/
-│   ├── addressGenerator.test.js
-│   ├── mailIngest.test.js
-│   ├── websocket.test.js
-│   ├── cleanup.test.js
-│   └── noSendPath.test.js
-└── README.md
+```http
+GET /api/v1/inbox/messages/:id/read
+Authorization: Bearer <token>
 ```
 
----
+Response `200`:
 
-## 12. Docker Compose (skeleton)
-
-```yaml
-services:
-  api:
-    build: .
-    ports: ["3000:3000"]
-    env_file: .env
-    depends_on: [postgres, redis]
-  worker:
-    build: .
-    command: node src/queues/parseEmail.worker.js
-    env_file: .env
-    depends_on: [postgres, redis]
-  cron:
-    build: .
-    command: node src/jobs/cleanup.cron.js
-    env_file: .env
-    depends_on: [postgres]
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: tempmail
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-    volumes: [pgdata:/var/lib/postgresql/data]
-  redis:
-    image: redis:7
-volumes:
-  pgdata:
+```json
+{
+  "success": true,
+  "message": "Message marked as read"
+}
 ```
 
----
+The current route uses `GET` for this state-changing operation. The implementation should be reviewed before production use because the update query currently filters by message ID without also applying the authenticated inbox ID.
 
-## 13. Testing Plan (T10)
+### 4.8 Mailgun raw-MIME webhook
 
-| Test | What it proves |
-|---|---|
-| `addressGenerator.test.js` | Collisions trigger retry; final address is unique and matches pattern |
-| `mailIngest.test.js` | A fixture `.eml` with an attachment is ingested → `Message.status === 'PARSED'`, attachment row created, HTML sanitized (script tags stripped) |
-| `websocket.test.js` | A connected client subscribed to an inbox receives a `message:new` event within a timeout after ingestion |
-| `cleanup.test.js` | An inbox/message/attachment with `expiresAt` in the past is hard-deleted (DB row gone, object-storage key deleted) after cron run |
-| `noSendPath.test.js` | Asserts no outbound-mail route, controller, or SMTP client exists in the codebase (e.g. grep-based check or route table introspection) — confirms the service cannot send mail |
+```http
+POST /api/v1/webhooks/mailgun/raw-mime
+Content-Type: multipart/form-data
+```
 
-Suggested tooling: **Vitest** or **Jest** (plain JS, no TS), `supertest` for HTTP, `ws` client for socket tests, a Postgres test database reset between runs (via `prisma migrate reset` or a transaction-rollback pattern).
+The endpoint accepts Mailgun fields including:
 
----
+| Field | Required | Description |
+|---|---:|---|
+| `timestamp` | Yes | Unix timestamp used for signature validation. |
+| `token` | Yes | Mailgun webhook token. |
+| `signature` | Yes | 64-character hexadecimal HMAC-SHA256 signature. |
+| `recipient` | Yes | Target inbox address. |
+| `body-mime` | Yes for raw ingestion | Raw MIME message as a file part. |
+| `sender` | No | Sender fallback value. |
+| `from` | No | Display name and sender address. |
+| `subject` | No | Subject fallback value. |
 
-## 14. Security Notes
+Processing includes multipart parsing with Multer, Mailgun signature verification, five-minute timestamp validation, recipient canonicalization, active-inbox lookup, size checks, MIME parsing, HTML sanitization, and creation of `Message` and `Attachment` records.
 
-- Inbox `token` is a capability secret — treat like a password; never log it, only return it once on creation.
-- Local part generation uses a cryptographically random alphabet (`nanoid`) to prevent guessing.
-- All inbound HTML is sanitized server-side before storage (defense in depth: also sandbox the iframe client-side).
-- Attachment downloads go through short-lived signed URLs, not proxied through the API, to limit blast radius and bandwidth cost.
-- Inbound webhook endpoint verifies a provider signature/secret — it is not user-authenticated and must not trust the `recipient` field blindly beyond resolving it to a real, non-expired inbox.
-- Rate-limit `POST /inboxes` per IP to prevent inbox-creation abuse.
+Response `202`:
+
+```json
+{
+  "success": true,
+  "duplicate": false,
+  "messageId": "message-uuid"
+}
+```
+
+Current rejection responses include:
+
+- `406` `Malformed Mailgun payload.`
+- `406` `Invalid Mailgun signature.`
+- `406` `Invalid recipient address.`
+- `406` `Inbox not found,unknown or expired`
+- `406` `Message exceeds size limit.`
+- `406` `Attachment Exceeds Size Limit.`
+- `500` for unexpected ingestion or persistence errors.
+
+The `duplicate` value is currently always `false`; deduplication is not implemented.
+
+### 4.9 Mailgun parsed webhook acknowledgement
+
+```http
+POST /api/v1/webhooks/mailgun/parsed
+Content-Type: multipart/form-data
+```
+
+This endpoint validates the Mailgun signature, recipient, and presence of `body-plain` or `body-html`, then returns an acknowledgement. It does not persist a message.
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "message": "Mailgun dashboard webhook received."
+}
+```
+
+### 4.10 Swagger UI
+
+```http
+GET /api-docs
+```
+
+The application serves the checked-in OpenAPI definition through `swagger-ui-express`. Treat the implementation routes in this document as authoritative where the generated Swagger description differs from the controllers and routes.
+
+### 4.11 Unknown API routes
+
+Unknown `/api/v1` routes return a JSON `404` response. The not-found handler is protected by a rate limiter allowing 30 invalid requests per five-minute window, with standard rate-limit headers enabled.
+
+## 5. Authentication and Address Rules
+
+### Bearer authentication
+
+Protected endpoints require:
+
+```http
+Authorization: Bearer <raw-token>
+```
+
+The raw token is hashed with SHA-256 and compared with the stored `tokenHash`. Tokens are not stored in plaintext.
+
+The access middleware returns `401` for missing, malformed, unknown, or empty credentials and `410` for an expired inbox.
+
+### Recipient canonicalization
+
+Inbound recipients are trimmed and lowercased. A recipient is accepted only when it has exactly one `@`, a non-empty local part, and a domain containing a dot. Display-name forms such as `Name <user@example.com>` and values containing spaces are rejected.
+
+### Address generation
+
+Generated local parts use cryptographically secure random selection from name lists, digits, letters, and multiple address patterns. A time-based base-36 suffix and random component reduce collisions. The controller retries unique-constraint collisions up to five times.
+
+## 6. Email Parsing, Sanitization, and Limits
+
+Raw MIME messages are parsed with `mailparser`. Stored message data includes sender information, subject, plain text, sanitized HTML, size values, and attachment metadata.
+
+The sanitizer permits a controlled set of common text, formatting, list, table, and link tags. Link schemes are limited to `http`, `https`, and `mailto`. Links are normalized with `target="_blank"` and `rel="noopener noreferrer"`; disallowed tags are discarded. Message HTML is sanitized during ingestion and again when returned by the message endpoint.
+
+Limits are configured through:
+
+```text
+MAX_MESSAGE_SIZE_MB       default: 25
+MAX_ATTACHMENT_SIZE_MB    default: 10 total attachment bytes per message
+```
+
+The current attachment flow stores metadata and an object key only. It does not persist attachment bytes to S3, R2, or another object store.
+
+## 7. Socket.IO Real-Time Interface
+
+The application initializes Socket.IO on the same HTTP server as Express. It is not a raw WebSocket protocol.
+
+### Client connection
+
+```js
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:9001");
+```
+
+### Join an inbox room
+
+```js
+socket.emit(
+  "join-inbox",
+  {
+    address: "generated-address@example.com",
+    token: "raw-token"
+  },
+  (response) => console.log(response)
+);
+```
+
+Successful acknowledgement:
+
+```json
+{
+  "success": true,
+  "room": "inbox:inbox-uuid"
+}
+```
+
+Invalid or expired credentials receive:
+
+```json
+{
+  "success": false,
+  "error": "invalid or expired inbox credentials"
+}
+```
+
+The server removes a socket from any previous inbox room before joining a new one.
+
+### New-message event
+
+The exported `publishNewMessage` helper emits `message:new` to the matching inbox room:
+
+```json
+{
+  "id": "message-uuid",
+  "fromAddress": "sender@example.com",
+  "subject": "Verification code",
+  "receivedAt": "2026-09-16T13:10:00.000Z"
+}
+```
+
+The current Mailgun ingestion path does not call `publishNewMessage`, so successful ingestion does not yet automatically push a real-time event.
+
+Socket.IO CORS uses `CLIENT_ORIGIN` when set and otherwise allows `*`.
+
+## 8. Persistence Model
+
+The PostgreSQL schema is defined in `src/api/v1/prisma/schema.prisma`.
+
+### Inbox
+
+Stores the generated address, local part, domain, hashed token, lifecycle timestamps, extension count, and soft-delete fields. An inbox owns zero or more messages.
+
+### Message
+
+Stores sender and recipient addresses, sender name, subject, plain text, sanitized HTML, size metadata, parsing status, read state, expiry, and the parent inbox relation.
+
+Message statuses are `PENDING`, `PARSED`, and `FAILED`.
+
+### Attachment
+
+Stores filename, content type, size, object key, checksum, timestamps, expiry, and the parent message relation. Database cascade deletion removes attachments when their parent message is deleted.
+
+### IngestLog
+
+The schema defines an `IngestLog` model for accepted and rejected inbound attempts, but the current ingestion implementation does not write to it.
+
+## 9. Environment Configuration
+
+Create a local `.env` file. Never commit credentials or copy real secrets into documentation.
+
+### Application and database
+
+```env
+PORT=9001
+DATABASE_URL=postgresql://user:password@localhost:5432/database
+DOMAIN_ADDRESS=example.com
+INBOX_TTL_MINUTES=60
+```
+
+`DOMAIN_ADDRESS` is required during application startup. `PORT` defaults to `9001`; `INBOX_TTL_MINUTES` defaults to `60`.
+
+### Mailgun and webhook processing
+
+```env
+MAILGUN_WEBHOOK_SIGNING_KEY=your-mailgun-webhook-signing-key
+MAX_MESSAGE_SIZE_MB=25
+MAX_ATTACHMENT_SIZE_MB=10
+```
+
+### Mailgun route configuration
+
+```env
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_API_BASE_URL=https://api.mailgun.net
+INBOX_DOMAIN=your-mailgun-inbound-domain
+APP_BASE_URL=https://your-public-tunnel-or-production-host
+```
+
+`APP_BASE_URL` is used by the route configuration script to create the destination `${APP_BASE_URL}/api/v1/webhooks/mailgun/raw-mime`.
+
+### Local webhook simulation
+
+```env
+TARGET_URL=http://localhost:9001/api/v1/webhooks/mailgun/raw-mime
+TEST_RECIPIENT=active-inbox@example.com
+TEST_SENDER=test.sender@example.com
+INCLUDE_ATTACHMENT=false
+```
+
+For ngrok or another tunnel, set `TARGET_URL` to the public URL with the complete webhook path.
+
+### Socket.IO
+
+```env
+CLIENT_ORIGIN=http://localhost:3000
+```
+
+When omitted, Socket.IO uses a permissive `*` origin configuration.
+
+## 10. Local Development and Mailgun Testing
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Prepare Prisma
+
+```bash
+npm run prisma:format
+npm run prisma:generate
+npm run prisma:push
+```
+
+`prisma:push` applies the schema directly to the configured database. Use it intentionally in development environments.
+
+### Start the server
+
+```bash
+npm run dev
+```
+
+The server should report:
+
+```text
+Server running at http://0.0.0.0:9001
+```
+
+### Create an inbox for testing
+
+```bash
+curl -X POST http://localhost:9001/api/v1/inbox
+```
+
+Copy the returned `data.address` and use it as `TEST_RECIPIENT`. The inbox must still be active when the simulator runs.
+
+### Expose the local server publicly
+
+Start ngrok, Cloudflare Tunnel, or another trusted tunnel that forwards to port `9001`:
+
+```bash
+ngrok http 9001
+```
+
+Set `APP_BASE_URL` to the current public URL before configuring Mailgun.
+
+### Configure the Mailgun inbound route
+
+```bash
+npm run mailgun:configure-inbound
+```
+
+The script lists existing Mailgun routes and updates the first route when one exists; otherwise it creates a route. The route forwards matching recipients to `/api/v1/webhooks/mailgun/raw-mime` and stops further route processing.
+
+### Simulate a standard webhook
+
+```bash
+npm run mailgun:simulate-webhook
+```
+
+The simulator creates a valid HMAC signature and sends a multipart request containing a raw MIME message. A successful result is HTTP `202` with a `messageId`.
+
+### Simulate an attachment
+
+```bash
+INCLUDE_ATTACHMENT=true npm run mailgun:simulate-webhook
+```
+
+The simulator adds a text attachment to the MIME message. The current service records attachment metadata but does not upload the attachment bytes to external object storage.
+
+### Public tunnel simulation
+
+```bash
+TARGET_URL=https://your-tunnel.ngrok-free.app/api/v1/webhooks/mailgun/raw-mime \
+npm run mailgun:simulate-webhook
+```
+
+If the request returns `406 Inbox not found,unknown or expired`, create a new inbox and update `TEST_RECIPIENT`. If it returns `406 Malformed Mailgun payload`, verify that the simulator is sending multipart `body-mime` and that the URL points to the raw-MIME route.
+
+### Inspect stored data
+
+```bash
+npm run prisma:studio
+```
+
+Prisma Studio uses port `10129` according to the package script.
+
+## 11. Test and Verification Commands
+
+Run the automated test suite:
+
+```bash
+npm test
+```
+
+The checked-in tests cover message-controller behavior, authorization lookup, sanitization, response shaping, Socket.IO connection, room subscription, invalid-token rejection, room isolation, and disconnect behavior.
+
+Useful syntax and operational checks:
+
+```bash
+node --check src/scripts/simulate-mailgun-webhook.js
+npm run prisma:format
+npm run prisma:generate
+```
+
+The Mailgun simulator is an integration-style manual pipeline check, not a Vitest test. No automated end-to-end test currently starts Express, provisions an inbox, configures Mailgun, and delivers a webhook.
+
+## 12. Repository Structure
+
+```text
+.
+├── api-documentation.md
+├── CHANGELOG.md
+├── LICENSE
+├── package.json
+├── prisma.config.js
+├── README.md
+├── src
+│   ├── api/v1
+│   │   ├── index.js                         # Express, HTTP server, Socket.IO, Swagger
+│   │   ├── controllers
+│   │   │   ├── health.js                    # Health response
+│   │   │   ├── inboxController.js            # Create, inspect, extend inboxes
+│   │   │   ├── initController.js             # Service metadata
+│   │   │   └── mailgunWebhookController.js   # Mailgun webhook handlers
+│   │   ├── prisma/schema.prisma               # PostgreSQL data model
+│   │   ├── routes
+│   │   │   ├── healthRoute.js
+│   │   │   ├── inboxRoute.js
+│   │   │   ├── initRoute.js
+│   │   │   ├── messageRoute.js
+│   │   │   ├── router.js
+│   │   │   └── webhookRoute.js
+│   │   └── services
+│   │       ├── mailgunClient.js               # Mailgun SDK client
+│   │       ├── mailgunSignatureService.js     # HMAC and timestamp checks
+│   │       ├── mailIngestionService.js        # Validation and persistence
+│   │       └── mailParserService.js           # MIME parsing and sanitization
+│   ├── configs
+│   │   ├── env.js                             # Required environment validation
+│   │   ├── generated/prisma                  # Generated Prisma client
+│   │   ├── prisma.js                          # Prisma PostgreSQL adapter
+│   │   ├── swagger.js                         # OpenAPI definition
+│   │   └── websocket.js                       # Socket.IO rooms and events
+│   ├── lib
+│   │   ├── addressGenerator.js                # Random local-part generation
+│   │   ├── components/rand_name.js            # Name dictionaries
+│   │   ├── emailAddress.js                    # Recipient canonicalization
+│   │   └── inboxAccess.js                     # Socket.IO token verification
+│   ├── middlewares
+│   │   └── requireInboxAccess.js              # REST bearer-token middleware
+│   ├── scripts
+│   │   ├── configure-mailgun-inbound-route.js # Mailgun route management
+│   │   └── simulate-mailgun-webhook.js        # Signed multipart simulator
+│   └── utils
+│       ├── generateToken.js                   # Token generation and hashing
+│       └── getCurrentTime.js                  # Time helper
+└── tests
+    ├── messageController.test.js
+    └── websocket.test.js
+```
+
+## 13. Operational and Security Notes
+
+- Treat the inbox token as a secret. It is the capability used to read and extend an inbox.
+- Do not commit `.env` files, Mailgun keys, database credentials, or webhook signing keys.
+- Keep the Mailgun signing key identical between Mailgun and the application environment.
+- Use HTTPS for public production traffic and configure the reverse proxy to sanitize forwarding headers.
+- Set `trust proxy` according to the actual number or identity of trusted proxy hops; do not blindly trust arbitrary forwarding headers.
+- Review the message-read update query before production deployment so the authenticated inbox boundary is enforced consistently.
+- Implement object-storage upload and authorized download handling before exposing attachment functionality to untrusted clients.
+- Add expiration cleanup, ingestion auditing, deduplication, and ingestion-to-Socket.IO publication if those capabilities are required by the production design.
+
+## 14. Source of Truth
+
+This document describes the current executable implementation. The route files, controllers, services, Prisma schema, and `package.json` are authoritative when documentation, Swagger descriptions, or earlier design notes disagree with runtime behavior.

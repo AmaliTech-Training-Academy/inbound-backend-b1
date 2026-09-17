@@ -36,11 +36,11 @@ const rawMime = INCLUDE_ATTACHMENT
       `This is a simulated inbound message body for local testing.`,
       ``,
       `--${boundary}`,
-      `Content-Type: text/plain; name="note.txt"`,
-      `Content-Disposition: attachment; filename="note.txt"`,
+      `Content-Type: text/plain; name="second_note.txt"`,
+      `Content-Disposition: attachment; filename="second_note.txt"`,
       `Content-Transfer-Encoding: base64`,
       ``,
-      Buffer.from("This is a test attachment.").toString("base64"),
+      Buffer.from("This is a test for sending attachments.").toString("base64"),
       ``,
       `--${boundary}--`,
     ].join("\r\n")
@@ -53,8 +53,8 @@ const rawMime = INCLUDE_ATTACHMENT
       `This is a simulated inbound message body for local testing.`,
     ].join("\r\n");
 
-// Mailgun forwards this payload as URL-encoded form data.
-const form = new URLSearchParams();
+// Mailgun sends the raw MIME message as a multipart file field.
+const form = new FormData();
 form.append("timestamp", timestamp);
 form.append("token", token);
 form.append("signature", signature);
@@ -63,7 +63,11 @@ form.append("sender", SENDER);
 form.append("from", `Test Sender <${SENDER}>`);
 form.append("subject", "Simulated inbound email");
 
-form.append("body-mime", rawMime);
+form.append(
+  "body-mime",
+  new Blob([rawMime], { type: "message/rfc822" }),
+  "message.eml"
+);
 
 async function main() {
   const response = await fetch(TARGET_URL, {
