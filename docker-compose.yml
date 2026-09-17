@@ -1,0 +1,11 @@
+version: '3'
+services:
+  my_service:
+    image: inbound-api
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "9001:8080"
+    volumes:
+      - .:/usr/src/app 
