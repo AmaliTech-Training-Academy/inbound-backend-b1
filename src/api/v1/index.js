@@ -99,17 +99,20 @@ app.use(
     limit: "30mb",
   }),
 );
-app.use((req, res, next) => {
-  if (
-    (req.method === "POST" || req.method === "PUT") &&
-    (!req.body || Object.keys(req.body).length === 0)
-  ) {
-    return res.status(400).json({
-      error: "Request body is missing",
-    });
-  }
-  next();
-});
+// app.use((req, res, next) => {
+//   if (
+//     (req.method === "POST" || req.method === "PUT") &&
+//     (!req.body || Object.keys(req.body).length === 0)
+//   ) {
+//     return res.status(400).json({
+//       error: "Request body is missing",
+//     });
+//   }
+//   next();
+// });
+
+
+
 app.use(cookieParser());
 app.disable("x-powered-by");
 
