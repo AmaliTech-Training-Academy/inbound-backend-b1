@@ -9,6 +9,8 @@ import swaggerUi from "swagger-ui-express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import sanitizeHtml from "sanitize-html";
 
 const app = express();
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDefinition));
@@ -40,9 +42,7 @@ const isAllowedOrigin = (origin, whitelist = []) => {
 
   return whitelist.includes(requestOrigin);
 };
-const allowedOrigins = parseAllowedOrigins(
-  JSON.parse(process.env.ALLOWED_ORIGINS || '["*"]'),
-); // we would apply the prod web-client url here in production
+const allowedOrigins = parseAllowedOrigins("http://localhost:3000"); // we would apply the prod web-client url here in production
 
 const corsOptions = {
   origin(origin, callback) {
@@ -117,6 +117,7 @@ app.use(v1Router);
 const server = http.createServer(app);
 const io = initWebSocket(server);
 app.set("io", io);
+
 
 app.use(initRoute);
 app.use(v1Router);
