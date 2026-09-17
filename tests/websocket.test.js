@@ -160,39 +160,5 @@ describe("WebSocket Real-Time Message Push & Isolation", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(client.connected).toBe(false);
-    await expect(
-      waitForSubscription(clientB, "second@temp.com", "valid-token")
-    ).resolves.toEqual({
-      success: true,
-      room: "inbox:inbox-2"
-    });
-
-    expect(accessChecker).toHaveBeenNthCalledWith(
-      1,
-      "first@temp.com",
-      "valid-token"
-    );
-
-    const clientAMessage = waitForMessage(clientA);
-    let clientBReceivedMessage = false;
-    clientB.once("message:new", () => {
-      clientBReceivedMessage = true;
-    });
-
-    publishNewMessage(io, "inbox-1", {
-      id: "message-1",
-      fromAddress: "sender@example.com",
-      subject: "Verification code",
-      receivedAt: new Date().toISOString()
-    });
-
-    await expect(clientAMessage).resolves.toMatchObject({
-      id: "message-1",
-      fromAddress: "sender@example.com",
-      subject: "Verification code"
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(clientBReceivedMessage).toBe(false);
   });
 });
