@@ -2,6 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import health from "./healthRoute.js";
 import { inboxRouter } from "./inboxRoute.js";
+import webhookRoute from "./webhookRoute.js";
 
 const API_VERSION = "/api/v1";
 const v1Router = express.Router();
@@ -35,6 +36,7 @@ routes.forEach(({ path, route }) => {
   v1Router.use(`${API_VERSION}${path}`, route);
 });
 
+v1Router.use(`${API_VERSION}/webhooks`, webhookRoute);
 
 v1Router.use(notFoundLimiter);
 
