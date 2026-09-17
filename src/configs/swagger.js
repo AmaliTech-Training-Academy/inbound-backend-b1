@@ -37,10 +37,74 @@ const swaggerDefinition = {
   info: {
     title: "Inbound Email API",
     version: "1.0.0",
-    description:
-      "OpenAPI documentation for the temporary inbound-email service. " +
-      "The service creates short-lived inboxes, receives Mailgun webhooks, " +
-      "parses MIME messages, sanitizes HTML, and stores messages in PostgreSQL.",
+    description: `## Overview
+OpenAPI documentation for the temporary inbound-email service. The service creates short-lived inboxes, receives Mailgun webhooks, parses MIME messages, sanitizes HTML, and stores messages in PostgreSQL.
+
+---
+
+## Real-Time WebSocket Interface (Socket.IO)
+In addition to REST endpoints, the server provides a real-time event interface powered by **Socket.IO** mounted on the primary HTTP server origin (e.g. \`http://localhost:9001\`).
+
+### 1. Connection
+Clients connect to the server root via Socket.IO:
+\`\`\`javascript
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:9001", {
+  transports: ["websocket", "polling"]
+});
+\`\`\`
+CORS origins can be customized via the \`CLIENT_ORIGIN\` environment variable (defaults to \`*\`).
+
+### 2. Authenticated Room Subscription: \`join-inbox\`
+Clients join an isolated room scoped to a specific inbox by providing the inbox address and raw token.
+
+- **Event:** \`join-inbox\`
+- **Direction:** Client to Server
+- **Payload Schema:** [SocketJoinInboxPayload](#/components/schemas/SocketJoinInboxPayload)
+\`\`\`json
+{
+  "address": "user-abc123@domain.com",
+  "token": "raw-inbox-token"
+}
+\`\`\`
+- **Acknowledgement Callback:**
+  - **Success Response:** [SocketJoinInboxSuccessResponse](#/components/schemas/SocketJoinInboxSuccessResponse)
+    \`\`\`json
+    {
+      "success": true,
+      "room": "inbox:c56a4180-65aa-42ec-a945-5fd21dec0538"
+    }
+    \`\`\`
+  - **Failure Response:** [SocketJoinInboxErrorResponse](#/components/schemas/SocketJoinInboxErrorResponse)
+    \`\`\`json
+    {
+      "success": false,
+      "error": "invalid or expired inbox credentials"
+    }
+    \`\`\`
+  - **Possible Error Reasons:**
+    - \`"address and token are required"\`: Missing or empty \`address\` or \`token\` fields.
+    - \`"invalid or expired inbox credentials"\`: The address does not exist, token does not match, or the inbox has expired.
+    - \`"unable to validate inbox credentials"\`: Database or server error during validation.
+  - **Room Isolation:** Clients are automatically removed from any prior \`inbox:*\` rooms before joining a new room.
+
+### 3. Real-Time Message Push: \`message:new\`
+When a new message arrives for a subscribed inbox, the server broadcasts an event to that inbox's room.
+
+- **Event:** \`message:new\`
+- **Direction:** Server to Client
+- **Target Room:** \`inbox:<inboxId>\`
+- **Payload Schema:** [SocketMessageNewEvent](#/components/schemas/SocketMessageNewEvent)
+\`\`\`json
+{
+  "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "fromAddress": "sender@example.com",
+  "subject": "Verification code",
+  "receivedAt": "2026-09-17T09:00:00.000Z"
+}
+\`\`\`
+`,
   },
   servers: [
     {
@@ -64,6 +128,10 @@ const swaggerDefinition = {
     {
       name: "Mailgun",
       description: "Inbound Mailgun webhook endpoints.",
+    },
+    {
+      name: "WebSocket",
+      description: "Socket.IO real-time inbox events (join-inbox, message:new).",
     },
   ],
   paths: {
@@ -884,6 +952,87 @@ const swaggerDefinition = {
           },
         },
       },
+      SocketJoinInboxPayload: {
+        type: "object",
+        required: ["address", "token"],
+        properties: {
+          address: {
+            type: "string",
+            format: "email",
+            description: "Temporary inbox email address (case-insensitive).",
+            example: "user-abc123@domain.com",
+          },
+          token: {
+            type: "string",
+            description: "Plaintext token returned upon inbox creation.",
+            example: "raw-inbox-token",
+          },
+        },
+      },
+      SocketJoinInboxSuccessResponse: {
+        type: "object",
+        required: ["success", "room"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          room: {
+            type: "string",
+            description: "Socket.IO room name subscribed to (inbox:<inboxId>).",
+            example: "inbox:c56a4180-65aa-42ec-a945-5fd21dec0538",
+          },
+        },
+      },
+      SocketJoinInboxErrorResponse: {
+        type: "object",
+        required: ["success", "error"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: false,
+          },
+          error: {
+            type: "string",
+            enum: [
+              "address and token are required",
+              "invalid or expired inbox credentials",
+              "unable to validate inbox credentials",
+            ],
+            example: "invalid or expired inbox credentials",
+          },
+        },
+      },
+      SocketMessageNewEvent: {
+        type: "object",
+        required: ["id", "fromAddress", "subject", "receivedAt"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            description: "Unique message UUID.",
+            example: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+            description: "Sender's email address.",
+            example: "sender@example.com",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+            description: "Email subject line.",
+            example: "Your verification code",
+          },
+          receivedAt: {
+            type: "string",
+            format: "date-time",
+            description: "ISO timestamp when the email was received.",
+            example: "2026-09-17T09:00:00.000Z",
+          },
+        },
+      },
     },
   },
   "x-socketio": {
@@ -893,24 +1042,25 @@ const swaggerDefinition = {
     events: {
       "join-inbox": {
         direction: "client-to-server",
+        description: "Subscribes the client socket to an inbox room after validating credentials.",
         payload: {
-          address: "generated-address@example.com",
-          token: "raw-token",
+          $ref: "#/components/schemas/SocketJoinInboxPayload",
         },
         acknowledgement: {
-          success: true,
-          room: "inbox:inbox-uuid",
+          success: {
+            $ref: "#/components/schemas/SocketJoinInboxSuccessResponse",
+          },
+          error: {
+            $ref: "#/components/schemas/SocketJoinInboxErrorResponse",
+          },
         },
       },
       "message:new": {
         direction: "server-to-client",
+        description: "Pushed to clients in an inbox room when a new email is ingested for that inbox.",
         payload: {
-          id: "message-uuid",
-          fromAddress: "sender@example.com",
-          subject: "Verification code",
-          receivedAt: "2026-09-16T13:10:00.000Z",
+          $ref: "#/components/schemas/SocketMessageNewEvent",
         },
-        note: "The current Mailgun ingestion path does not call publishNewMessage automatically.",
       },
     },
   },
