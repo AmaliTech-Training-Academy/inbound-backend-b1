@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Scan for leaked secrets
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Gitleaks
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+          gitleaks detect --source . --verbose
