@@ -49,10 +49,11 @@ jobs:
                 script: |
                   set -e
                   cd /opt/inbound-backend-b1
-                  git pull origin dev
+                  git pull origin feat/caddy-proxy-with-docker  
                   docker compose build
                   docker compose up -d --build
                   sleep 10
                   curl --fail http://localhost:9001/health
                   echo "Inbound Deployment successful"
 
+#!!!!Make sure to change the branc name in pull
