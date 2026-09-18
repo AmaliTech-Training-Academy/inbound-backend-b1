@@ -5,5 +5,10 @@ npm-debug.log
 .env
 .env.*
 coverage
+Dockerfile
+README.md
+api-documentation.md
+.gitignore
+CHANGELOG.md
 .vscode
 src/configs/generated

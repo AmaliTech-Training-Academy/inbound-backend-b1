@@ -1,0 +1,58 @@
+name: Inbound-Server-deployment-Pipeline
+
+
+on:
+  push:
+    branches:
+      - dev
+      - feat/caddy-proxy-with-docker
+jobs:
+    ci:
+        name: Code Quality Checks
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
+
+          - name: Setup Node.js
+            uses: actions/setup-node@v4
+            with:
+              node-version: 22
+              cache: npm
+
+          - name: Install dependencies
+            run: npm ci
+
+          - name: Check JavaScript syntax
+            run: |
+              find src -name "*.js" -print0 | xargs -0 -r -n1 node --check
+
+          - name: Validate Prisma schema
+            run: npx prisma validate --schema=./src/api/v1/prisma/schema.prisma
+
+          - name: Check Prisma formatting
+            run: npx prisma format --schema=./src/api/v1/prisma/schema.prisma --check
+    
+    deploy:
+        name: Deploy to Production
+        runs-on: ubuntu-latest
+        needs: ci
+
+        steps:
+            - name: Deploy Image EC2
+              uses: appleboy/ssh-action@v0.1.5
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USER }}
+                key: ${{ secrets.EC2_KEY }}
+                script: |
+                  set -e
+                  cd /opt/inbound-backend-b1
+                  git pull origin dev
+                  docker compose build
+                  docker compose up -d --build
+                  sleep 10
+                  curl --fail http://localhost:9001/health
+                  echo "Inbound Deployment successful"
+
