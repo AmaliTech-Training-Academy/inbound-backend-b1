@@ -1,4 +1,4 @@
-54.76.29.168.nip.io {
+54.73.161.140.nip.io {
     handle /api/* {
         reverse_proxy api:9001
     }
