@@ -1,5 +1,5 @@
 54.73.161.140.nip.io {
-    handle /api/* {
-        reverse_proxy api:9001
+    handle_path /server/* {
+        reverse_proxy my_service:9001
     }
 }
