@@ -5,6 +5,10 @@ const errorResponse = {
       schema: {
         $ref: "#/components/schemas/ErrorResponse",
       },
+      example: {
+        success: false,
+        message: "Internal Server Error",
+      },
     },
   },
 };
@@ -17,6 +21,10 @@ const bearerErrors = {
         schema: {
           $ref: "#/components/schemas/ErrorResponse",
         },
+        example: {
+          success: false,
+          message: "Authorization token is required",
+        },
       },
     },
   },
@@ -26,6 +34,10 @@ const bearerErrors = {
       "application/json": {
         schema: {
           $ref: "#/components/schemas/ErrorResponse",
+        },
+        example: {
+          success: false,
+          message: "Inbox has expired",
         },
       },
     },
@@ -190,6 +202,20 @@ const swaggerDefinition = {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+                examples: {
+                  notFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  deleted: {
+                    value: {
+                      success: false,
+                      message: "Inbox has been deleted",
+                    },
+                  },
+                },
               },
             },
           },
@@ -233,6 +259,20 @@ const swaggerDefinition = {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+                examples: {
+                  notFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  deleted: {
+                    value: {
+                      success: false,
+                      message: "Inbox has been deleted",
+                    },
+                  },
+                },
               },
             },
           },
@@ -264,12 +304,20 @@ const swaggerDefinition = {
                   message: "Message Fetched Success",
                   data: {
                     id: "message-uuid",
+                    inboxId: "inbox-uuid",
+                    fromAddress: "sender@example.com",
+                    fromName: "Example Sender",
+                    toAddress: "generated-address@example.com",
                     subject: "Verification code",
                     sender: "Example Sender <sender@example.com>",
                     from: "sender@example.com",
                     to: "generated-address@example.com",
-                    body: "<p>Sanitized message body</p>",
-                    inboxId: "inbox-uuid",
+                    textBody: "Your verification code is 123456.",
+                    htmlBody: "<p>Your verification code is <strong>123456</strong>.</p>",
+                    rawObjectKey: null,
+                    rawSizeBytes: null,
+                    rawHtmlSize: 53,
+                    sizeBytes: 184,
                     attachments: [
                       {
                         id: "attachment-uuid",
@@ -283,7 +331,9 @@ const swaggerDefinition = {
                     isRead: false,
                     status: "PARSED",
                     receivedAt: "2026-09-16T13:10:00.000Z",
+                    parsedAt: "2026-09-16T13:10:00.250Z",
                     expiresAt: "2026-09-16T14:00:00.000Z",
+                    errorMessage: null,
                     createdAt: "2026-09-16T13:10:00.000Z",
                   },
                 },
@@ -307,6 +357,20 @@ const swaggerDefinition = {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
+                },
+                examples: {
+                  inboxNotFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  messageNotFound: {
+                    value: {
+                      success: false,
+                      message: "Message Not Found",
+                    },
+                  },
                 },
               },
             },
@@ -371,6 +435,16 @@ const swaggerDefinition = {
             "multipart/form-data": {
               schema: {
                 $ref: "#/components/schemas/MailgunRawMimeRequest",
+              },
+              example: {
+                timestamp: "1726491600",
+                token: "mailgun-webhook-token",
+                signature: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                recipient: "generated-address@example.com",
+                sender: "sender@example.com",
+                from: "Example Sender <sender@example.com>",
+                subject: "Verification code",
+                "body-mime": "message.eml",
               },
             },
           },
@@ -438,6 +512,14 @@ const swaggerDefinition = {
             "multipart/form-data": {
               schema: {
                 $ref: "#/components/schemas/MailgunParsedRequest",
+              },
+              example: {
+                timestamp: "1726491600",
+                token: "mailgun-webhook-token",
+                signature: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                recipient: "generated-address@example.com",
+                "body-plain": "Your verification code is 123456.",
+                "body-html": "<p>Your verification code is <strong>123456</strong>.</p>",
               },
             },
           },
