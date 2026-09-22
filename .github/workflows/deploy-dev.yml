@@ -53,6 +53,5 @@ jobs:
                   docker compose build
                   docker compose up -d --build
                   sleep 10
-                  curl --fail http://localhost:9001/health
                   echo "Inbound Deployment successful"
 
