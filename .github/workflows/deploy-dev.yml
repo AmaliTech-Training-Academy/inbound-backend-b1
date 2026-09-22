@@ -56,4 +56,3 @@ jobs:
                   curl --fail http://localhost:9001/health
                   echo "Inbound Deployment successful"
 
-#!!!!Make sure to change the branc name in pull
