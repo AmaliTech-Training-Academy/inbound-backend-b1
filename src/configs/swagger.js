@@ -691,7 +691,7 @@ const swaggerDefinition = {
       },
       Message: {
         type: "object",
-        description: "Public message projection returned by GET /api/v1/inbox/messages/{id}. It is derived from the Prisma Message model and intentionally excludes internal storage and error fields.",
+        description: "Message response model derived from the Prisma Message model. The GET endpoint returns the public aliases and projections (from, to, body, sender, and attachment size/url); persistence-only fields are documented as nullable or optional because the current controller does not expose them.",
         required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt", "createdAt"],
         properties: {
           id: {
@@ -704,6 +704,17 @@ const swaggerDefinition = {
           },
           sender: {
             type: "string",
+            description: "Public projection of the persisted fromName and fromAddress values.",
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+            description: "Persisted sender address. Not returned by the current GET projection; use from in the response payload.",
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+            description: "Persisted sender display name. Not returned as a standalone field; it contributes to sender.",
           },
           from: {
             type: "string",
@@ -713,9 +724,24 @@ const swaggerDefinition = {
             type: "string",
             format: "email",
           },
+          toAddress: {
+            type: "string",
+            format: "email",
+            description: "Persisted recipient address. The public response exposes the same value as to.",
+          },
           body: {
             type: "string",
             description: "Sanitized HTML when available; otherwise plain text.",
+          },
+          textBody: {
+            type: "string",
+            nullable: true,
+            description: "Persisted plain-text body. The public response combines body selection into body.",
+          },
+          htmlBody: {
+            type: "string",
+            nullable: true,
+            description: "Persisted sanitized HTML body. The public response exposes the selected body as body.",
           },
           inboxId: {
             type: "string",
@@ -742,6 +768,39 @@ const swaggerDefinition = {
             type: "string",
             format: "date-time",
           },
+          rawObjectKey: {
+            type: "string",
+            nullable: true,
+            description: "Persisted raw-message object key. Not returned by the current GET endpoint.",
+          },
+          rawSizeBytes: {
+            type: "integer",
+            minimum: 0,
+            nullable: true,
+            description: "Persisted raw-message size in bytes. Not returned by the current GET endpoint.",
+          },
+          rawHtmlSize: {
+            type: "number",
+            format: "double",
+            nullable: true,
+            description: "Persisted raw HTML size. Not returned by the current GET endpoint.",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+            description: "Persisted message size in bytes. Not returned by the current GET endpoint.",
+          },
+          parsedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "Timestamp when parsing completed. Not returned by the current GET endpoint.",
+          },
+          errorMessage: {
+            type: "string",
+            nullable: true,
+            description: "Persisted ingestion failure detail, when present. Not returned by the current GET endpoint.",
+          },
           createdAt: {
             type: "string",
             format: "date-time",
@@ -751,7 +810,7 @@ const swaggerDefinition = {
       },
       Attachment: {
         type: "object",
-        description: "Public attachment projection returned inside a message. Prisma sizeBytes is exposed as size and Prisma objectKey is exposed as url; attachment bytes and checksum are not returned by the current message endpoint.",
+        description: "Public attachment projection returned inside a message. Prisma sizeBytes is exposed as size and Prisma objectKey is exposed as url; attachment checksum and bytes are not returned by the current message endpoint.",
         required: ["id", "filename", "contentType", "size", "url", "expiresAt"],
         properties: {
           id: {
