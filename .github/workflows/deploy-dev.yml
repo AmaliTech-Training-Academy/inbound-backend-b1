@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - dev
-      - feat/caddy-proxy-with-docker
 jobs:
     ci:
         name: Code Quality Checks
