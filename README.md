@@ -18,88 +18,8 @@ Launches Prisma Studio, allowing you to manage and view your database through a 
 
 ## Database ERD
 
-![ERD ](https://files.catbox.moe/vsc400.svg)
-
 ![ERD](/Inbound-ERD.svg)
 
-
-
-```text
-┌──────────────────────────────┐
-│            Inbox             │
-├──────────────────────────────┤
-│ PK id             varchar    │
-│    address        varchar NN │
-│    localPart      varchar NN │
-│    domain         varchar NN │
-│    createdAt      timestamp NN│
-│    expiresAt      timestamp  │
-│    lastExtendedAt timestamp  │
-│    extendCount    int NN     │
-│    isDeleted      boolean NN │
-│    deletedAt      timestamp  │
-│    tokenHash      varchar NN │
-└───────────────┬──────────────┘
-                │ 1
-                │
-                │ N
-┌───────────────▼────────────────┐
-│             Message            │
-├────────────────────────────────┤
-│ PK id             varchar      │
-│ FK inboxId        varchar NN   │
-│    fromAddress    varchar NN   │
-│    fromName       varchar      │
-│    toAddress      varchar NN   │
-│    subject        varchar      │
-│    textBody       text         │
-│    htmlBody       text         │
-│    rawObjectKey   varchar      │
-│    rawSizeBytes   int          │
-│    rawHtmlSize    float        │
-│    sizeBytes      int NN       │
-│    status         MessageStatus NN│
-│    isRead         boolean NN   │
-│    receivedAt     timestamp NN │
-│    parsedAt       timestamp    │
-│    expiresAt      timestamp NN │
-│    errorMessage   text         │
-└────────────────┬───────────────┘
-                 │ 1
-                 │
-                 │ N
-        ┌────────▼────────────────┐
-        │        Attachment       │
-        ├─────────────────────────┤
-        │ PK id          varchar   │
-        │ FK messageId   varchar NN│
-        │    filename    varchar NN│
-        │    contentType varchar NN│
-        │    sizeBytes   int NN   │
-        │    objectKey   varchar NN│
-        │    checksum    varchar  │
-        │    createdAt   timestamp NN│
-        │    expiresAt   timestamp NN│
-        └─────────────────────────┘
-
-
-┌──────────────────────────────┐
-│          IngestLog            │
-├──────────────────────────────┤
-│ PK id             varchar    │
-│    recipient      varchar NN │
-│    accepted       boolean NN │
-│    rejectReason   text       │
-│    rawObjectKey   varchar    │
-│    sizeBytes      int        │
-│    createdAt      timestamp NN│
-└──────────────────────────────┘
-
-Relationships:
-  Inbox    1 ─────────── N  Message
-  Message 1 ─────────── N  Attachment
-  IngestLog                 (standalone audit/log record)
-```
 
 ## Testing the Mailgun Inbound Pipeline
 
