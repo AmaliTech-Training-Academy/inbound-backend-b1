@@ -16,6 +16,11 @@ Pushes schema changes directly to the database.
 
 Launches Prisma Studio, allowing you to manage and view your database through a GUI.
 
+## Database ERD
+
+![ERD](/Inbound-ERD.svg)
+
+
 ## Testing the Mailgun Inbound Pipeline
 
 This section walks through testing the email ingestion pipeline locally, from generating a test inbox to receiving a fully parsed message.
