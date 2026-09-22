@@ -54,4 +54,3 @@ jobs:
                   sleep 10
                   echo "Inbound Deployment successful"
 
-#!!!!Make sure to change the branc name in pull
