@@ -360,31 +360,6 @@ Socket.IO runs on the same origin as the HTTP server. The current WebSocket impl
 - The parsed Mailgun acknowledgement endpoint validates the webhook but does not persist a message.
 - The health endpoint checks HTTP responsiveness only; it does not verify database or Mailgun readiness.
 
-## License
-
-This project is distributed under the license in [`LICENSE`](LICENSE).
-## Prisma Commands
-
-### `npm run prisma:format`
-
-Formats the Prisma schema to keep it clean and properly structured.
-
-### `npm run prisma:generate`
-
-Generates the Prisma Client files based on the current schema.
-
-### `npm run prisma:push`
-
-Pushes schema changes directly to the database.
-
-### `npm run prisma:studio`
-
-Launches Prisma Studio, allowing you to manage and view your database through a GUI.
-
-## Database ERD
-
-![ERD](/Inbound-ERD.svg)
-
 
 ## Testing the Mailgun Inbound Pipeline
 
@@ -402,10 +377,12 @@ Copy the data.address value from the response. Note its expiresAt — inboxes ar
 
 Make sure these are present in .env:
 
+```bash
 MAILGUN_WEBHOOK_SIGNING_KEY=...   # Mailgun dashboard → Settings → API Security → Webhook Signing Key
 MAILGUN_API_KEY=...               # Mailgun dashboard → Settings → API Security → Private API key
 INBOX_DOMAIN=...                  # e.g. sandboxXXXX.mailgun.org
 APP_BASE_URL=...                  # your current cloudflared tunnel URL
+```
 
 APP_BASE_URL changes every time cloudflared restarts (unless you're on a named tunnel), so double-check it's current before testing.
 
@@ -420,9 +397,11 @@ This creates (or updates, if one already exists — free/sandbox plans are cappe
 Test the ingestion pipeline directly, without waiting on real email delivery:
 
 **.env.example**
+```bash
 MAILGUN_WEBHOOK_SIGNING_KEY=your-key \
 TARGET_URL=https://your-tunnel-url/api/v1/webhooks/mailgun/raw-mime \
 TEST_RECIPIENT=the-address-from-step-1 \
+```
 
 > npm run mailgun:simulate-webhook
 
@@ -432,6 +411,7 @@ Optional flags:
 
 TEST_SENDER — override the fake sender address
 INCLUDE_ATTACHMENT=true — also test the attachment/object-storage path
+
 5. Test with a real email
 
 Once the simulated call succeeds, send an actual email from any provider to the address from step 1. Check:
@@ -440,5 +420,6 @@ Mailgun dashboard → Sending → Logs, to confirm the route matched and forward
 Your server logs, to confirm the webhook was received
 The Message table (npm run prisma:studio), for the new row
 
+## License
 
-temp
+This project is distributed under the license in [`LICENSE`](LICENSE).
