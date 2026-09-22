@@ -18,6 +18,12 @@ Launches Prisma Studio, allowing you to manage and view your database through a 
 
 ## Database ERD
 
+![Project Logo](https://files.catbox.moe/vsc400.svg)
+
+![Dashboard Screenshot](/Inbound-ERD.svg)
+
+
+
 ```text
 ┌──────────────────────────────┐
 │            Inbox             │
