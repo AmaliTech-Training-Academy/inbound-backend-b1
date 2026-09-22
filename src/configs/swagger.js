@@ -284,6 +284,7 @@ const swaggerDefinition = {
                     status: "PARSED",
                     receivedAt: "2026-09-16T13:10:00.000Z",
                     expiresAt: "2026-09-16T14:00:00.000Z",
+                    createdAt: "2026-09-16T13:10:00.000Z",
                   },
                 },
               },
@@ -363,7 +364,7 @@ const swaggerDefinition = {
         summary: "Ingest a raw Mailgun MIME message",
         operationId: "ingestMailgunRawMime",
         description:
-          "Accepts Mailgun multipart form data, verifies the webhook signature, validates the recipient inbox, parses the MIME message, sanitizes HTML, and persists the message and attachment metadata.",
+          "Accepts Mailgun multipart form data, verifies the webhook signature, validates the recipient inbox, parses the MIME message, sanitizes HTML, and persists a PARSED message using the IngestedMessageRecord shape. The service accepts either a body-mime file part or parsed body-plain/body-html fields. The response acknowledges persistence with the message ID; it does not return the complete Prisma record.",
         requestBody: {
           required: true,
           content: {
@@ -634,7 +635,7 @@ const swaggerDefinition = {
           },
           message: {
             type: "object",
-            description: "The controller currently serializes this value as an empty object because the loaded message array has no count property.",
+            description: "The current controller returns an empty object because the loaded message array has no count property.",
             additionalProperties: false,
           },
         },
@@ -690,7 +691,8 @@ const swaggerDefinition = {
       },
       Message: {
         type: "object",
-        required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt"],
+        description: "Public message projection returned by GET /api/v1/inbox/messages/{id}. It is derived from the Prisma Message model and intentionally excludes internal storage and error fields.",
+        required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt", "createdAt"],
         properties: {
           id: {
             type: "string",
@@ -740,10 +742,16 @@ const swaggerDefinition = {
             type: "string",
             format: "date-time",
           },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+            description: "Timestamp when the message record was created.",
+          },
         },
       },
       Attachment: {
         type: "object",
+        description: "Public attachment projection returned inside a message. Prisma sizeBytes is exposed as size and Prisma objectKey is exposed as url; attachment bytes and checksum are not returned by the current message endpoint.",
         required: ["id", "filename", "contentType", "size", "url", "expiresAt"],
         properties: {
           id: {
@@ -762,7 +770,7 @@ const swaggerDefinition = {
           },
           url: {
             type: "string",
-            description: "Currently the stored object-key value, not a downloadable HTTP URL.",
+            description: "The stored object key returned by the current message API. It is not a filesystem path or a downloadable HTTP URL.",
           },
           expiresAt: {
             type: "string",
@@ -784,9 +792,130 @@ const swaggerDefinition = {
           },
         },
       },
+      IngestedMessageRecord: {
+        type: "object",
+        description: "Persistence shape supplied by mailIngestionService when creating a Prisma Message. This is an internal ingestion record, not the public GET message projection.",
+        required: [
+          "inboxId",
+          "fromAddress",
+          "fromName",
+          "toAddress",
+          "subject",
+          "textBody",
+          "htmlBody",
+          "status",
+          "expiresAt",
+          "sizeBytes",
+          "rawHtmlSize",
+          "attachments",
+        ],
+        properties: {
+          inboxId: {
+            type: "string",
+            format: "uuid",
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+          },
+          toAddress: {
+            type: "string",
+            format: "email",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          textBody: {
+            type: "string",
+            nullable: true,
+          },
+          htmlBody: {
+            type: "string",
+            nullable: true,
+            description: "Sanitized HTML body produced by the ingestion parser.",
+          },
+          status: {
+            type: "string",
+            enum: ["PENDING", "PARSED", "FAILED"],
+            example: "PARSED",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+            description: "Raw MIME byte length when body-mime is supplied; otherwise the UTF-8 byte length of textBody plus htmlBody.",
+          },
+          rawHtmlSize: {
+            type: "number",
+            format: "double",
+            nullable: true,
+          },
+          attachments: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/IngestedAttachmentRecord",
+            },
+          },
+        },
+      },
+      IngestedAttachmentRecord: {
+        type: "object",
+        description: "Attachment data supplied to the nested Prisma create operation during ingestion.",
+        required: [
+          "filename",
+          "contentType",
+          "sizeBytes",
+          "checksum",
+          "objectKey",
+          "expiresAt",
+        ],
+        properties: {
+          filename: {
+            type: "string",
+          },
+          contentType: {
+            type: "string",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+          },
+          checksum: {
+            type: "string",
+            nullable: true,
+          },
+          objectKey: {
+            type: "string",
+            description: "Internal Mailgun-derived storage key in the current implementation.",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+      },
       MailgunRawMimeRequest: {
         type: "object",
-        required: ["timestamp", "token", "signature", "recipient", "body-mime"],
+        required: ["timestamp", "token", "signature", "recipient"],
+        oneOf: [
+          {
+            required: ["body-mime"],
+          },
+          {
+            required: ["body-plain"],
+          },
+          {
+            required: ["body-html"],
+          },
+        ],
         properties: {
           timestamp: {
             type: "string",
@@ -823,11 +952,27 @@ const swaggerDefinition = {
             format: "binary",
             description: "Raw MIME message file part.",
           },
+          "body-plain": {
+            type: "string",
+            description: "Parsed plain-text body accepted when body-mime is not supplied.",
+          },
+          "body-html": {
+            type: "string",
+            description: "Parsed HTML body accepted when body-mime is not supplied.",
+          },
         },
       },
       MailgunParsedRequest: {
         type: "object",
         required: ["timestamp", "token", "signature", "recipient"],
+        oneOf: [
+          {
+            required: ["body-plain"],
+          },
+          {
+            required: ["body-html"],
+          },
+        ],
         properties: {
           timestamp: {
             type: "string",
