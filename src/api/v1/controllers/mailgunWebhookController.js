@@ -1,5 +1,6 @@
 import { ingestMailgunMessage, PermanentIngestionError } from "../services/mailIngestionService.js";
 import { verifyMailgunSignature } from "../services/mailgunSignatureService.js";
+import { publishNewMessage } from "../../../configs/websocket.js";
 
 export function createMailgunDashboardController() {
 	return (req, res) => {
@@ -33,6 +34,11 @@ export function createMailgunWebhookController({ prisma }) {
 			};
 
 			const result = await ingestMailgunMessage({ body, prisma });
+
+			const io = req.app?.get("io");
+			if (io && result.message) {
+				publishNewMessage(io, result.message.inboxId, result.message);
+			}
 
 			return res.status(202).json({
 				success: true,
