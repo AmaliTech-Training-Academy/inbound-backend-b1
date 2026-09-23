@@ -11,6 +11,7 @@ const {
     },
     message: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
     },
   },
@@ -33,6 +34,7 @@ vi.mock("../src/api/v1/services/mailParserService.js", () => ({
 }));
 
 import {
+  fetchInboxMessages,
   fetchMessage,
   readMessage,
 } from "../src/api/v1/controllers/messageController.js";
@@ -47,6 +49,91 @@ beforeEach(() => {
 
   hashTokenMock.mockReturnValue("hashed-token");
   sanitizeHtmlBodyMock.mockImplementation((body) => body);
+});
+
+describe("fetchInboxMessages", () => {
+  it("should return all messages with attachment counts", async () => {
+    prismaMock.inbox.findUnique.mockResolvedValue({
+      id: "inbox-123",
+    });
+    prismaMock.message.findMany.mockResolvedValue([
+      {
+        id: "message-123",
+        subject: "Welcome",
+        fromName: "John Doe",
+        fromAddress: "john@example.com",
+        toAddress: "test@example.com",
+        isRead: false,
+        status: "PARSED",
+        receivedAt: new Date("2026-09-16T10:00:00.000Z"),
+        expiresAt: new Date("2026-09-20T10:00:00.000Z"),
+        attachments: [{ id: "attachment-123" }, { id: "attachment-456" }],
+      },
+    ]);
+
+    const req = {
+      token: "test-token",
+    };
+
+    const res = createResponse();
+
+    await fetchInboxMessages(req, res);
+
+    expect(prismaMock.inbox.findUnique).toHaveBeenCalledWith({
+      where: {
+        tokenHash: "hashed-token",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    expect(prismaMock.message.findMany).toHaveBeenCalledWith({
+      where: {
+        inboxId: "inbox-123",
+      },
+      select: {
+        id: true,
+        subject: true,
+        fromName: true,
+        fromAddress: true,
+        toAddress: true,
+        isRead: true,
+        status: true,
+        receivedAt: true,
+        expiresAt: true,
+        attachments: {
+          select: {
+            id: true,
+          },
+        },
+      },
+      orderBy: {
+        receivedAt: "desc",
+      },
+    });
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      message: "Inbox messages fetched successfully",
+      data: {
+        messages: [
+          {
+            id: "message-123",
+            subject: "Welcome",
+            fromName: "John Doe",
+            fromAddress: "john@example.com",
+            toAddress: "test@example.com",
+            isRead: false,
+            status: "PARSED",
+            receivedAt: new Date("2026-09-16T10:00:00.000Z"),
+            expiresAt: new Date("2026-09-20T10:00:00.000Z"),
+            attachmentCount: 2,
+          },
+        ],
+      },
+    });
+  });
 });
 
 describe("fetchMessage", () => {
