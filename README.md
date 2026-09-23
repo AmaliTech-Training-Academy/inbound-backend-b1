@@ -355,7 +355,6 @@ Socket.IO runs on the same origin as the HTTP server. The current WebSocket impl
 
 - The current attachment API returns metadata and an internal `objectKey`; it does not expose a file-download endpoint.
 - Attachment bytes are not uploaded to object storage by the current ingestion service.
-- There is no pagination endpoint for messages.
 - There is no inbox deletion endpoint or background cleanup worker.
 - The parsed Mailgun acknowledgement endpoint validates the webhook but does not persist a message.
 - The health endpoint checks HTTP responsiveness only; it does not verify database or Mailgun readiness.
