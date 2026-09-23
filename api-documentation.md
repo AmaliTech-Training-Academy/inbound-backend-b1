@@ -447,7 +447,7 @@ The exported `publishNewMessage` helper emits `message:new` to the matching inbo
 }
 ```
 
-The current Mailgun ingestion path does not call `publishNewMessage`, so successful ingestion does not yet automatically push a real-time event.
+Upon successful ingestion by the Mailgun webhook (`POST /api/v1/webhooks/mailgun/raw-mime`), the server invokes `publishNewMessage`, automatically pushing the `message:new` event to all clients subscribed to that inbox room.
 
 Socket.IO CORS uses `CLIENT_ORIGIN` when set and otherwise allows `*`.
 
