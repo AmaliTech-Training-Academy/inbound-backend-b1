@@ -1,0 +1,32 @@
+services:
+  my_service:
+    image: inbound-api
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "9001:9001"
+    volumes:
+      - .:/usr/src/app
+    expose:
+      - "9001"
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      - my_service
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+

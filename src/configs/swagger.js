@@ -5,6 +5,10 @@ const errorResponse = {
       schema: {
         $ref: "#/components/schemas/ErrorResponse",
       },
+      example: {
+        success: false,
+        message: "Internal Server Error",
+      },
     },
   },
 };
@@ -17,6 +21,10 @@ const bearerErrors = {
         schema: {
           $ref: "#/components/schemas/ErrorResponse",
         },
+        example: {
+          success: false,
+          message: "Authorization token is required",
+        },
       },
     },
   },
@@ -26,6 +34,10 @@ const bearerErrors = {
       "application/json": {
         schema: {
           $ref: "#/components/schemas/ErrorResponse",
+        },
+        example: {
+          success: false,
+          message: "Inbox has expired",
         },
       },
     },
@@ -258,6 +270,20 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+                examples: {
+                  notFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  deleted: {
+                    value: {
+                      success: false,
+                      message: "Inbox has been deleted",
+                    },
+                  },
+                },
               },
             },
           },
@@ -301,6 +327,20 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+                examples: {
+                  notFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  deleted: {
+                    value: {
+                      success: false,
+                      message: "Inbox has been deleted",
+                    },
+                  },
+                },
               },
             },
           },
@@ -332,12 +372,20 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                   message: "Message Fetched Success",
                   data: {
                     id: "message-uuid",
+                    inboxId: "inbox-uuid",
+                    fromAddress: "sender@example.com",
+                    fromName: "Example Sender",
+                    toAddress: "generated-address@example.com",
                     subject: "Verification code",
                     sender: "Example Sender <sender@example.com>",
                     from: "sender@example.com",
                     to: "generated-address@example.com",
-                    body: "<p>Sanitized message body</p>",
-                    inboxId: "inbox-uuid",
+                    textBody: "Your verification code is 123456.",
+                    htmlBody: "<p>Your verification code is <strong>123456</strong>.</p>",
+                    rawObjectKey: null,
+                    rawSizeBytes: null,
+                    rawHtmlSize: 53,
+                    sizeBytes: 184,
                     attachments: [
                       {
                         id: "attachment-uuid",
@@ -351,7 +399,10 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                     isRead: false,
                     status: "PARSED",
                     receivedAt: "2026-09-16T13:10:00.000Z",
+                    parsedAt: "2026-09-16T13:10:00.250Z",
                     expiresAt: "2026-09-16T14:00:00.000Z",
+                    errorMessage: null,
+                    createdAt: "2026-09-16T13:10:00.000Z",
                   },
                 },
               },
@@ -374,6 +425,20 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
+                },
+                examples: {
+                  inboxNotFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  messageNotFound: {
+                    value: {
+                      success: false,
+                      message: "Message Not Found",
+                    },
+                  },
                 },
               },
             },
@@ -431,13 +496,23 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "Ingest a raw Mailgun MIME message",
         operationId: "ingestMailgunRawMime",
         description:
-          "Accepts Mailgun multipart form data, verifies the webhook signature, validates the recipient inbox, parses the MIME message, sanitizes HTML, and persists the message and attachment metadata.",
+          "Accepts Mailgun multipart form data, verifies the webhook signature, validates the recipient inbox, parses the MIME message, sanitizes HTML, and persists a PARSED message using the IngestedMessageRecord shape. The service accepts either a body-mime file part or parsed body-plain/body-html fields. The response acknowledges persistence with the message ID; it does not return the complete Prisma record.",
         requestBody: {
           required: true,
           content: {
             "multipart/form-data": {
               schema: {
                 $ref: "#/components/schemas/MailgunRawMimeRequest",
+              },
+              example: {
+                timestamp: "1726491600",
+                token: "mailgun-webhook-token",
+                signature: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                recipient: "generated-address@example.com",
+                sender: "sender@example.com",
+                from: "Example Sender <sender@example.com>",
+                subject: "Verification code",
+                "body-mime": "message.eml",
               },
             },
           },
@@ -505,6 +580,14 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             "multipart/form-data": {
               schema: {
                 $ref: "#/components/schemas/MailgunParsedRequest",
+              },
+              example: {
+                timestamp: "1726491600",
+                token: "mailgun-webhook-token",
+                signature: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                recipient: "generated-address@example.com",
+                "body-plain": "Your verification code is 123456.",
+                "body-html": "<p>Your verification code is <strong>123456</strong>.</p>",
               },
             },
           },
@@ -702,7 +785,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           message: {
             type: "object",
-            description: "The controller currently serializes this value as an empty object because the loaded message array has no count property.",
+            description: "The current controller returns an empty object because the loaded message array has no count property.",
             additionalProperties: false,
           },
         },
@@ -758,7 +841,8 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       Message: {
         type: "object",
-        required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt"],
+        description: "Message response model derived from the Prisma Message model. The GET endpoint returns the public aliases and projections (from, to, body, sender, and attachment size/url); persistence-only fields are documented as nullable or optional because the current controller does not expose them.",
+        required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt", "createdAt"],
         properties: {
           id: {
             type: "string",
@@ -770,6 +854,17 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           sender: {
             type: "string",
+            description: "Public projection of the persisted fromName and fromAddress values.",
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+            description: "Persisted sender address. Not returned by the current GET projection; use from in the response payload.",
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+            description: "Persisted sender display name. Not returned as a standalone field; it contributes to sender.",
           },
           from: {
             type: "string",
@@ -779,9 +874,24 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             type: "string",
             format: "email",
           },
+          toAddress: {
+            type: "string",
+            format: "email",
+            description: "Persisted recipient address. The public response exposes the same value as to.",
+          },
           body: {
             type: "string",
             description: "Sanitized HTML when available; otherwise plain text.",
+          },
+          textBody: {
+            type: "string",
+            nullable: true,
+            description: "Persisted plain-text body. The public response combines body selection into body.",
+          },
+          htmlBody: {
+            type: "string",
+            nullable: true,
+            description: "Persisted sanitized HTML body. The public response exposes the selected body as body.",
           },
           inboxId: {
             type: "string",
@@ -808,10 +918,49 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             type: "string",
             format: "date-time",
           },
+          rawObjectKey: {
+            type: "string",
+            nullable: true,
+            description: "Persisted raw-message object key. Not returned by the current GET endpoint.",
+          },
+          rawSizeBytes: {
+            type: "integer",
+            minimum: 0,
+            nullable: true,
+            description: "Persisted raw-message size in bytes. Not returned by the current GET endpoint.",
+          },
+          rawHtmlSize: {
+            type: "number",
+            format: "double",
+            nullable: true,
+            description: "Persisted raw HTML size. Not returned by the current GET endpoint.",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+            description: "Persisted message size in bytes. Not returned by the current GET endpoint.",
+          },
+          parsedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "Timestamp when parsing completed. Not returned by the current GET endpoint.",
+          },
+          errorMessage: {
+            type: "string",
+            nullable: true,
+            description: "Persisted ingestion failure detail, when present. Not returned by the current GET endpoint.",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+            description: "Timestamp when the message record was created.",
+          },
         },
       },
       Attachment: {
         type: "object",
+        description: "Public attachment projection returned inside a message. Prisma sizeBytes is exposed as size and Prisma objectKey is exposed as url; attachment checksum and bytes are not returned by the current message endpoint.",
         required: ["id", "filename", "contentType", "size", "url", "expiresAt"],
         properties: {
           id: {
@@ -830,7 +979,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           url: {
             type: "string",
-            description: "Currently the stored object-key value, not a downloadable HTTP URL.",
+            description: "The stored object key returned by the current message API. It is not a filesystem path or a downloadable HTTP URL.",
           },
           expiresAt: {
             type: "string",
@@ -852,9 +1001,130 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
         },
       },
+      IngestedMessageRecord: {
+        type: "object",
+        description: "Persistence shape supplied by mailIngestionService when creating a Prisma Message. This is an internal ingestion record, not the public GET message projection.",
+        required: [
+          "inboxId",
+          "fromAddress",
+          "fromName",
+          "toAddress",
+          "subject",
+          "textBody",
+          "htmlBody",
+          "status",
+          "expiresAt",
+          "sizeBytes",
+          "rawHtmlSize",
+          "attachments",
+        ],
+        properties: {
+          inboxId: {
+            type: "string",
+            format: "uuid",
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+          },
+          toAddress: {
+            type: "string",
+            format: "email",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          textBody: {
+            type: "string",
+            nullable: true,
+          },
+          htmlBody: {
+            type: "string",
+            nullable: true,
+            description: "Sanitized HTML body produced by the ingestion parser.",
+          },
+          status: {
+            type: "string",
+            enum: ["PENDING", "PARSED", "FAILED"],
+            example: "PARSED",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+            description: "Raw MIME byte length when body-mime is supplied; otherwise the UTF-8 byte length of textBody plus htmlBody.",
+          },
+          rawHtmlSize: {
+            type: "number",
+            format: "double",
+            nullable: true,
+          },
+          attachments: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/IngestedAttachmentRecord",
+            },
+          },
+        },
+      },
+      IngestedAttachmentRecord: {
+        type: "object",
+        description: "Attachment data supplied to the nested Prisma create operation during ingestion.",
+        required: [
+          "filename",
+          "contentType",
+          "sizeBytes",
+          "checksum",
+          "objectKey",
+          "expiresAt",
+        ],
+        properties: {
+          filename: {
+            type: "string",
+          },
+          contentType: {
+            type: "string",
+          },
+          sizeBytes: {
+            type: "integer",
+            minimum: 0,
+          },
+          checksum: {
+            type: "string",
+            nullable: true,
+          },
+          objectKey: {
+            type: "string",
+            description: "Internal Mailgun-derived storage key in the current implementation.",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+      },
       MailgunRawMimeRequest: {
         type: "object",
-        required: ["timestamp", "token", "signature", "recipient", "body-mime"],
+        required: ["timestamp", "token", "signature", "recipient"],
+        oneOf: [
+          {
+            required: ["body-mime"],
+          },
+          {
+            required: ["body-plain"],
+          },
+          {
+            required: ["body-html"],
+          },
+        ],
         properties: {
           timestamp: {
             type: "string",
@@ -891,11 +1161,27 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             format: "binary",
             description: "Raw MIME message file part.",
           },
+          "body-plain": {
+            type: "string",
+            description: "Parsed plain-text body accepted when body-mime is not supplied.",
+          },
+          "body-html": {
+            type: "string",
+            description: "Parsed HTML body accepted when body-mime is not supplied.",
+          },
         },
       },
       MailgunParsedRequest: {
         type: "object",
         required: ["timestamp", "token", "signature", "recipient"],
+        oneOf: [
+          {
+            required: ["body-plain"],
+          },
+          {
+            required: ["body-html"],
+          },
+        ],
         properties: {
           timestamp: {
             type: "string",

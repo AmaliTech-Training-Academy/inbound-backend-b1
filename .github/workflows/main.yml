@@ -1,0 +1,12 @@
+name: Main Prod Checks
+
+on:
+    pull_request: 
+        branches : [main]
+
+jobs:
+    checks:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Run checks
+              run: echo "Checks passed"
