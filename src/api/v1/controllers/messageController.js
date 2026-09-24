@@ -3,6 +3,77 @@ import prisma from "../../../configs/prisma.js";
 import { hashToken } from "../../../utils/generateToken.js";
 import { sanitizeHtmlBody } from "../services/mailParserService.js";
 
+export const fetchInboxMessages = asyncHandler(async (req, res) => {
+  try {
+    const token = hashToken(req.token);
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing Token",
+      });
+    }
+
+    const inbox = await prisma.inbox.findUnique({
+      where: {
+        tokenHash: token,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (!inbox) {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox Not Found",
+      });
+    }
+
+    const messages = await prisma.message.findMany({
+        where: {
+          inboxId: inbox.id,
+        },
+        select: {
+          id: true,
+          subject: true,
+          fromName: true,
+          fromAddress: true,
+          toAddress: true,
+          isRead: true,
+          status: true,
+          receivedAt: true,
+          expiresAt: true,
+          attachments: {
+            select: {
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          receivedAt: "desc",
+        },
+      });
+
+    res.status(200).json({
+      success: true,
+      message: "Inbox messages fetched successfully",
+      data: {
+        messages: messages.map(({ attachments, ...message }) => ({
+          ...message,
+          attachmentCount: attachments.length,
+        })),
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching inbox messages",
+    });
+  }
+});
+
+
 export const fetchMessage = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
