@@ -105,7 +105,7 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
         createdAt: inbox.createdAt,
         expiresAt: inbox.expiresAt,
         message: {
-          count : inbox.messages.count
+          count: inbox.messages.length,
         }
       },
     });
