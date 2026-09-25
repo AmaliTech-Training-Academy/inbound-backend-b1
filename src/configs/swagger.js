@@ -490,6 +490,76 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/messages/unread/all": {
+      get: {
+        tags: ["Messages"],
+        summary: "Fetch all unread messages for the authenticated inbox",
+        operationId: "getUnreadMessages",
+        description:
+          "Returns the unread messages for the current inbox, ordered by receivedAt descending. The controller returns only the public fields needed for the inbox UI.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Unread messages list",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UnreadMessagesResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Unread messages fetched successfully",
+                  data: [
+                    {
+                      id: "message-uuid",
+                      subject: "Verification code",
+                      sender: "Example Sender <sender@example.com>",
+                      to: "generated-address@example.com",
+                      receivedAt: "2026-09-16T13:10:00.000Z",
+                      isRead: false,
+                    },
+                    {
+                      id: "message-uuid-2",
+                      subject: "Password reset",
+                      sender: "Support <support@example.com>",
+                      to: "generated-address@example.com",
+                      receivedAt: "2026-09-16T12:45:00.000Z",
+                      isRead: false,
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing or invalid token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox Not Found",
+                },
+              },
+            },
+          },
+          500: errorResponse,
+        },
+      },
+    },
     "/api/v1/webhooks/mailgun/raw-mime": {
       post: {
         tags: ["Mailgun"],
@@ -998,6 +1068,55 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           message: {
             type: "string",
             example: "Message marked as read",
+          },
+        },
+      },
+      UnreadMessagesResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Unread messages fetched successfully",
+          },
+          data: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/UnreadMessage",
+            },
+          },
+        },
+      },
+      UnreadMessage: {
+        type: "object",
+        required: ["id", "subject", "sender", "to", "receivedAt", "isRead"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          sender: {
+            type: "string",
+            description: "Formatted sender value using fromName and fromAddress when present.",
+          },
+          to: {
+            type: "string",
+            format: "email",
+          },
+          receivedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          isRead: {
+            type: "boolean",
           },
         },
       },
