@@ -348,6 +348,86 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/messages": {
+      get: {
+        tags: ["Messages"],
+        summary: "Fetch all messages from the authenticated inbox",
+        operationId: "getInboxMessages",
+        description:
+          "Returns every message belonging to the current inbox, ordered newest-first. Each item includes the public message metadata and attachment count.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Inbox messages list",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InboxMessagesResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Inbox messages fetched successfully",
+                  data: {
+                    messages: [
+                      {
+                        id: "message-uuid",
+                        subject: "Verification code",
+                        fromName: "Example Sender",
+                        fromAddress: "sender@example.com",
+                        toAddress: "generated-address@example.com",
+                        isRead: false,
+                        status: "PARSED",
+                        receivedAt: "2026-09-16T13:10:00.000Z",
+                        expiresAt: "2026-09-16T14:00:00.000Z",
+                        attachmentCount: 1,
+                      },
+                      {
+                        id: "message-uuid-2",
+                        subject: "Password reset",
+                        fromName: "Support",
+                        fromAddress: "support@example.com",
+                        toAddress: "generated-address@example.com",
+                        isRead: true,
+                        status: "PARSED",
+                        receivedAt: "2026-09-16T12:45:00.000Z",
+                        expiresAt: "2026-09-16T13:45:00.000Z",
+                        attachmentCount: 0,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing or invalid token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox Not Found",
+                },
+              },
+            },
+          },
+          500: errorResponse,
+        },
+      },
+    },
     "/api/v1/inbox/messages/{id}": {
       get: {
         tags: ["Messages"],
@@ -1068,6 +1148,77 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           message: {
             type: "string",
             example: "Message marked as read",
+          },
+        },
+      },
+      InboxMessagesResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Inbox messages fetched successfully",
+          },
+          data: {
+            type: "object",
+            required: ["messages"],
+            properties: {
+              messages: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/InboxMessageSummary",
+                },
+              },
+            },
+          },
+        },
+      },
+      InboxMessageSummary: {
+        type: "object",
+        required: ["id", "subject", "fromName", "fromAddress", "toAddress", "isRead", "status", "receivedAt", "expiresAt", "attachmentCount"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+          },
+          toAddress: {
+            type: "string",
+            format: "email",
+          },
+          isRead: {
+            type: "boolean",
+          },
+          status: {
+            type: "string",
+            enum: ["PENDING", "PARSED", "FAILED"],
+          },
+          receivedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          attachmentCount: {
+            type: "integer",
+            minimum: 0,
           },
         },
       },
