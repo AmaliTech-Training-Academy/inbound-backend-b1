@@ -131,3 +131,62 @@ export const readMessage = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
+export const fetchAllUnreadMessages = asyncHandler(async (req, res) => {
+  try {
+    const token = hashToken(req.token);
+if(!token){
+  return res.status(400).json({
+    success: false,
+    message: "Token Message Id",
+  });
+}
+
+    const inbox = await prisma.inbox.findUnique({
+      where: {
+        tokenHash: token,
+      },
+    });
+if(!inbox){
+  return res.status(404).json({
+    success: false, 
+    message: "Inbox Not Found",
+  });
+}
+
+
+    const inboxId = inbox.id;
+    const unreadMessages = await prisma.message.findMany({
+      where: {
+        inboxId,
+        isRead: false,
+      },
+      orderBy: {
+        receivedAt: "desc",
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Unread messages fetched successfully",
+      data: unreadMessages.map((message) => ({
+        id: message.id,
+        subject: message.subject,
+        sender: message.fromName
+          ? `${message.fromName} <${message.fromAddress}>`
+          : message.fromAddress,
+        to: message.toAddress,
+        receivedAt: message.receivedAt,
+        isRead: message.isRead,
+      })),
+    });
+  }
+  catch (error) {
+    console.error("Error fetching unread messages:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching unread messages",
+    });
+  }
+});
