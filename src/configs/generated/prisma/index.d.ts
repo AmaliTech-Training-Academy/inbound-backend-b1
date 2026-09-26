@@ -14,6 +14,11 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 
 /**
+ * Model Session
+ * 
+ */
+export type Session = $Result.DefaultSelection<Prisma.$SessionPayload>
+/**
  * Model Inbox
  * 
  */
@@ -61,8 +66,8 @@ export const MessageStatus: typeof $Enums.MessageStatus
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Inboxes
- * const inboxes = await prisma.inbox.findMany()
+ * // Fetch zero or more Sessions
+ * const sessions = await prisma.session.findMany()
  * ```
  *
  *
@@ -84,8 +89,8 @@ export class PrismaClient<
    * const prisma = new PrismaClient({
    *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
    * })
-   * // Fetch zero or more Inboxes
-   * const inboxes = await prisma.inbox.findMany()
+   * // Fetch zero or more Sessions
+   * const sessions = await prisma.session.findMany()
    * ```
    *
    *
@@ -174,6 +179,16 @@ export class PrismaClient<
   }>>
 
       /**
+   * `prisma.session`: Exposes CRUD operations for the **Session** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Sessions
+    * const sessions = await prisma.session.findMany()
+    * ```
+    */
+  get session(): Prisma.SessionDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.inbox`: Exposes CRUD operations for the **Inbox** model.
     * Example usage:
     * ```ts
@@ -659,6 +674,7 @@ export namespace Prisma {
 
 
   export const ModelName: {
+    Session: 'Session',
     Inbox: 'Inbox',
     Message: 'Message',
     Attachment: 'Attachment',
@@ -678,10 +694,84 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "inbox" | "message" | "attachment" | "ingestLog"
+      modelProps: "session" | "inbox" | "message" | "attachment" | "ingestLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
+      Session: {
+        payload: Prisma.$SessionPayload<ExtArgs>
+        fields: Prisma.SessionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.SessionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.SessionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          findFirst: {
+            args: Prisma.SessionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.SessionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          findMany: {
+            args: Prisma.SessionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>[]
+          }
+          create: {
+            args: Prisma.SessionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          createMany: {
+            args: Prisma.SessionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.SessionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>[]
+          }
+          delete: {
+            args: Prisma.SessionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          update: {
+            args: Prisma.SessionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          deleteMany: {
+            args: Prisma.SessionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.SessionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.SessionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>[]
+          }
+          upsert: {
+            args: Prisma.SessionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SessionPayload>
+          }
+          aggregate: {
+            args: Prisma.SessionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateSession>
+          }
+          groupBy: {
+            args: Prisma.SessionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<SessionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.SessionCountArgs<ExtArgs>
+            result: $Utils.Optional<SessionCountAggregateOutputType> | number
+          }
+        }
+      }
       Inbox: {
         payload: Prisma.$InboxPayload<ExtArgs>
         fields: Prisma.InboxFieldRefs
@@ -1101,6 +1191,7 @@ export namespace Prisma {
     comments?: runtime.SqlCommenterPlugin[]
   }
   export type GlobalOmitConfig = {
+    session?: SessionOmit
     inbox?: InboxOmit
     message?: MessageOmit
     attachment?: AttachmentOmit
@@ -1181,6 +1272,37 @@ export namespace Prisma {
 
 
   /**
+   * Count Type SessionCountOutputType
+   */
+
+  export type SessionCountOutputType = {
+    inboxes: number
+  }
+
+  export type SessionCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    inboxes?: boolean | SessionCountOutputTypeCountInboxesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * SessionCountOutputType without action
+   */
+  export type SessionCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SessionCountOutputType
+     */
+    select?: SessionCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * SessionCountOutputType without action
+   */
+  export type SessionCountOutputTypeCountInboxesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: InboxWhereInput
+  }
+
+
+  /**
    * Count Type InboxCountOutputType
    */
 
@@ -1247,6 +1369,1081 @@ export namespace Prisma {
    */
 
   /**
+   * Model Session
+   */
+
+  export type AggregateSession = {
+    _count: SessionCountAggregateOutputType | null
+    _min: SessionMinAggregateOutputType | null
+    _max: SessionMaxAggregateOutputType | null
+  }
+
+  export type SessionMinAggregateOutputType = {
+    id: string | null
+    tokenHash: string | null
+    createdAt: Date | null
+    lastExtendedAt: Date | null
+    expiresAt: Date | null
+  }
+
+  export type SessionMaxAggregateOutputType = {
+    id: string | null
+    tokenHash: string | null
+    createdAt: Date | null
+    lastExtendedAt: Date | null
+    expiresAt: Date | null
+  }
+
+  export type SessionCountAggregateOutputType = {
+    id: number
+    tokenHash: number
+    createdAt: number
+    lastExtendedAt: number
+    expiresAt: number
+    _all: number
+  }
+
+
+  export type SessionMinAggregateInputType = {
+    id?: true
+    tokenHash?: true
+    createdAt?: true
+    lastExtendedAt?: true
+    expiresAt?: true
+  }
+
+  export type SessionMaxAggregateInputType = {
+    id?: true
+    tokenHash?: true
+    createdAt?: true
+    lastExtendedAt?: true
+    expiresAt?: true
+  }
+
+  export type SessionCountAggregateInputType = {
+    id?: true
+    tokenHash?: true
+    createdAt?: true
+    lastExtendedAt?: true
+    expiresAt?: true
+    _all?: true
+  }
+
+  export type SessionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Session to aggregate.
+     */
+    where?: SessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Sessions to fetch.
+     */
+    orderBy?: SessionOrderByWithRelationInput | SessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: SessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Sessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Sessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Sessions
+    **/
+    _count?: true | SessionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: SessionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: SessionMaxAggregateInputType
+  }
+
+  export type GetSessionAggregateType<T extends SessionAggregateArgs> = {
+        [P in keyof T & keyof AggregateSession]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateSession[P]>
+      : GetScalarType<T[P], AggregateSession[P]>
+  }
+
+
+
+
+  export type SessionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SessionWhereInput
+    orderBy?: SessionOrderByWithAggregationInput | SessionOrderByWithAggregationInput[]
+    by: SessionScalarFieldEnum[] | SessionScalarFieldEnum
+    having?: SessionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: SessionCountAggregateInputType | true
+    _min?: SessionMinAggregateInputType
+    _max?: SessionMaxAggregateInputType
+  }
+
+  export type SessionGroupByOutputType = {
+    id: string
+    tokenHash: string
+    createdAt: Date
+    lastExtendedAt: Date | null
+    expiresAt: Date
+    _count: SessionCountAggregateOutputType | null
+    _min: SessionMinAggregateOutputType | null
+    _max: SessionMaxAggregateOutputType | null
+  }
+
+  type GetSessionGroupByPayload<T extends SessionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<SessionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof SessionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], SessionGroupByOutputType[P]>
+            : GetScalarType<T[P], SessionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type SessionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tokenHash?: boolean
+    createdAt?: boolean
+    lastExtendedAt?: boolean
+    expiresAt?: boolean
+    inboxes?: boolean | Session$inboxesArgs<ExtArgs>
+    _count?: boolean | SessionCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["session"]>
+
+  export type SessionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tokenHash?: boolean
+    createdAt?: boolean
+    lastExtendedAt?: boolean
+    expiresAt?: boolean
+  }, ExtArgs["result"]["session"]>
+
+  export type SessionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    tokenHash?: boolean
+    createdAt?: boolean
+    lastExtendedAt?: boolean
+    expiresAt?: boolean
+  }, ExtArgs["result"]["session"]>
+
+  export type SessionSelectScalar = {
+    id?: boolean
+    tokenHash?: boolean
+    createdAt?: boolean
+    lastExtendedAt?: boolean
+    expiresAt?: boolean
+  }
+
+  export type SessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tokenHash" | "createdAt" | "lastExtendedAt" | "expiresAt", ExtArgs["result"]["session"]>
+  export type SessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    inboxes?: boolean | Session$inboxesArgs<ExtArgs>
+    _count?: boolean | SessionCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type SessionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type SessionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $SessionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Session"
+    objects: {
+      inboxes: Prisma.$InboxPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      tokenHash: string
+      createdAt: Date
+      lastExtendedAt: Date | null
+      expiresAt: Date
+    }, ExtArgs["result"]["session"]>
+    composites: {}
+  }
+
+  type SessionGetPayload<S extends boolean | null | undefined | SessionDefaultArgs> = $Result.GetResult<Prisma.$SessionPayload, S>
+
+  type SessionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<SessionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: SessionCountAggregateInputType | true
+    }
+
+  export interface SessionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Session'], meta: { name: 'Session' } }
+    /**
+     * Find zero or one Session that matches the filter.
+     * @param {SessionFindUniqueArgs} args - Arguments to find a Session
+     * @example
+     * // Get one Session
+     * const session = await prisma.session.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends SessionFindUniqueArgs>(args: SelectSubset<T, SessionFindUniqueArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Session that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {SessionFindUniqueOrThrowArgs} args - Arguments to find a Session
+     * @example
+     * // Get one Session
+     * const session = await prisma.session.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends SessionFindUniqueOrThrowArgs>(args: SelectSubset<T, SessionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Session that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionFindFirstArgs} args - Arguments to find a Session
+     * @example
+     * // Get one Session
+     * const session = await prisma.session.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends SessionFindFirstArgs>(args?: SelectSubset<T, SessionFindFirstArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Session that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionFindFirstOrThrowArgs} args - Arguments to find a Session
+     * @example
+     * // Get one Session
+     * const session = await prisma.session.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends SessionFindFirstOrThrowArgs>(args?: SelectSubset<T, SessionFindFirstOrThrowArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Sessions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Sessions
+     * const sessions = await prisma.session.findMany()
+     * 
+     * // Get first 10 Sessions
+     * const sessions = await prisma.session.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const sessionWithIdOnly = await prisma.session.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends SessionFindManyArgs>(args?: SelectSubset<T, SessionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Session.
+     * @param {SessionCreateArgs} args - Arguments to create a Session.
+     * @example
+     * // Create one Session
+     * const Session = await prisma.session.create({
+     *   data: {
+     *     // ... data to create a Session
+     *   }
+     * })
+     * 
+     */
+    create<T extends SessionCreateArgs>(args: SelectSubset<T, SessionCreateArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Sessions.
+     * @param {SessionCreateManyArgs} args - Arguments to create many Sessions.
+     * @example
+     * // Create many Sessions
+     * const session = await prisma.session.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends SessionCreateManyArgs>(args?: SelectSubset<T, SessionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Sessions and returns the data saved in the database.
+     * @param {SessionCreateManyAndReturnArgs} args - Arguments to create many Sessions.
+     * @example
+     * // Create many Sessions
+     * const session = await prisma.session.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Sessions and only return the `id`
+     * const sessionWithIdOnly = await prisma.session.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends SessionCreateManyAndReturnArgs>(args?: SelectSubset<T, SessionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Session.
+     * @param {SessionDeleteArgs} args - Arguments to delete one Session.
+     * @example
+     * // Delete one Session
+     * const Session = await prisma.session.delete({
+     *   where: {
+     *     // ... filter to delete one Session
+     *   }
+     * })
+     * 
+     */
+    delete<T extends SessionDeleteArgs>(args: SelectSubset<T, SessionDeleteArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Session.
+     * @param {SessionUpdateArgs} args - Arguments to update one Session.
+     * @example
+     * // Update one Session
+     * const session = await prisma.session.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends SessionUpdateArgs>(args: SelectSubset<T, SessionUpdateArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Sessions.
+     * @param {SessionDeleteManyArgs} args - Arguments to filter Sessions to delete.
+     * @example
+     * // Delete a few Sessions
+     * const { count } = await prisma.session.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends SessionDeleteManyArgs>(args?: SelectSubset<T, SessionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Sessions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Sessions
+     * const session = await prisma.session.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends SessionUpdateManyArgs>(args: SelectSubset<T, SessionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Sessions and returns the data updated in the database.
+     * @param {SessionUpdateManyAndReturnArgs} args - Arguments to update many Sessions.
+     * @example
+     * // Update many Sessions
+     * const session = await prisma.session.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Sessions and only return the `id`
+     * const sessionWithIdOnly = await prisma.session.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends SessionUpdateManyAndReturnArgs>(args: SelectSubset<T, SessionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Session.
+     * @param {SessionUpsertArgs} args - Arguments to update or create a Session.
+     * @example
+     * // Update or create a Session
+     * const session = await prisma.session.upsert({
+     *   create: {
+     *     // ... data to create a Session
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Session we want to update
+     *   }
+     * })
+     */
+    upsert<T extends SessionUpsertArgs>(args: SelectSubset<T, SessionUpsertArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Sessions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionCountArgs} args - Arguments to filter Sessions to count.
+     * @example
+     * // Count the number of Sessions
+     * const count = await prisma.session.count({
+     *   where: {
+     *     // ... the filter for the Sessions we want to count
+     *   }
+     * })
+    **/
+    count<T extends SessionCountArgs>(
+      args?: Subset<T, SessionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], SessionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Session.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends SessionAggregateArgs>(args: Subset<T, SessionAggregateArgs>): Prisma.PrismaPromise<GetSessionAggregateType<T>>
+
+    /**
+     * Group by Session.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SessionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends SessionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: SessionGroupByArgs['orderBy'] }
+        : { orderBy?: SessionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, SessionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetSessionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Session model
+   */
+  readonly fields: SessionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Session.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__SessionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    inboxes<T extends Session$inboxesArgs<ExtArgs> = {}>(args?: Subset<T, Session$inboxesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InboxPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Session model
+   */
+  interface SessionFieldRefs {
+    readonly id: FieldRef<"Session", 'String'>
+    readonly tokenHash: FieldRef<"Session", 'String'>
+    readonly createdAt: FieldRef<"Session", 'DateTime'>
+    readonly lastExtendedAt: FieldRef<"Session", 'DateTime'>
+    readonly expiresAt: FieldRef<"Session", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Session findUnique
+   */
+  export type SessionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter, which Session to fetch.
+     */
+    where: SessionWhereUniqueInput
+  }
+
+  /**
+   * Session findUniqueOrThrow
+   */
+  export type SessionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter, which Session to fetch.
+     */
+    where: SessionWhereUniqueInput
+  }
+
+  /**
+   * Session findFirst
+   */
+  export type SessionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter, which Session to fetch.
+     */
+    where?: SessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Sessions to fetch.
+     */
+    orderBy?: SessionOrderByWithRelationInput | SessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Sessions.
+     */
+    cursor?: SessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Sessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Sessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Sessions.
+     */
+    distinct?: SessionScalarFieldEnum | SessionScalarFieldEnum[]
+  }
+
+  /**
+   * Session findFirstOrThrow
+   */
+  export type SessionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter, which Session to fetch.
+     */
+    where?: SessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Sessions to fetch.
+     */
+    orderBy?: SessionOrderByWithRelationInput | SessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Sessions.
+     */
+    cursor?: SessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Sessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Sessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Sessions.
+     */
+    distinct?: SessionScalarFieldEnum | SessionScalarFieldEnum[]
+  }
+
+  /**
+   * Session findMany
+   */
+  export type SessionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter, which Sessions to fetch.
+     */
+    where?: SessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Sessions to fetch.
+     */
+    orderBy?: SessionOrderByWithRelationInput | SessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Sessions.
+     */
+    cursor?: SessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Sessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Sessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Sessions.
+     */
+    distinct?: SessionScalarFieldEnum | SessionScalarFieldEnum[]
+  }
+
+  /**
+   * Session create
+   */
+  export type SessionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Session.
+     */
+    data: XOR<SessionCreateInput, SessionUncheckedCreateInput>
+  }
+
+  /**
+   * Session createMany
+   */
+  export type SessionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Sessions.
+     */
+    data: SessionCreateManyInput | SessionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Session createManyAndReturn
+   */
+  export type SessionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * The data used to create many Sessions.
+     */
+    data: SessionCreateManyInput | SessionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Session update
+   */
+  export type SessionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Session.
+     */
+    data: XOR<SessionUpdateInput, SessionUncheckedUpdateInput>
+    /**
+     * Choose, which Session to update.
+     */
+    where: SessionWhereUniqueInput
+  }
+
+  /**
+   * Session updateMany
+   */
+  export type SessionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Sessions.
+     */
+    data: XOR<SessionUpdateManyMutationInput, SessionUncheckedUpdateManyInput>
+    /**
+     * Filter which Sessions to update
+     */
+    where?: SessionWhereInput
+    /**
+     * Limit how many Sessions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Session updateManyAndReturn
+   */
+  export type SessionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * The data used to update Sessions.
+     */
+    data: XOR<SessionUpdateManyMutationInput, SessionUncheckedUpdateManyInput>
+    /**
+     * Filter which Sessions to update
+     */
+    where?: SessionWhereInput
+    /**
+     * Limit how many Sessions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Session upsert
+   */
+  export type SessionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Session to update in case it exists.
+     */
+    where: SessionWhereUniqueInput
+    /**
+     * In case the Session found by the `where` argument doesn't exist, create a new Session with this data.
+     */
+    create: XOR<SessionCreateInput, SessionUncheckedCreateInput>
+    /**
+     * In case the Session was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<SessionUpdateInput, SessionUncheckedUpdateInput>
+  }
+
+  /**
+   * Session delete
+   */
+  export type SessionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+    /**
+     * Filter which Session to delete.
+     */
+    where: SessionWhereUniqueInput
+  }
+
+  /**
+   * Session deleteMany
+   */
+  export type SessionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Sessions to delete
+     */
+    where?: SessionWhereInput
+    /**
+     * Limit how many Sessions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Session.inboxes
+   */
+  export type Session$inboxesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Inbox
+     */
+    select?: InboxSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Inbox
+     */
+    omit?: InboxOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: InboxInclude<ExtArgs> | null
+    where?: InboxWhereInput
+    orderBy?: InboxOrderByWithRelationInput | InboxOrderByWithRelationInput[]
+    cursor?: InboxWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: InboxScalarFieldEnum | InboxScalarFieldEnum[]
+  }
+
+  /**
+   * Session without action
+   */
+  export type SessionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Session
+     */
+    select?: SessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Session
+     */
+    omit?: SessionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SessionInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Model Inbox
    */
 
@@ -1268,44 +2465,47 @@ export namespace Prisma {
 
   export type InboxMinAggregateOutputType = {
     id: string | null
+    sessionId: string | null
     address: string | null
     localPart: string | null
     domain: string | null
+    tokenHash: string | null
     createdAt: Date | null
     expiresAt: Date | null
     lastExtendedAt: Date | null
     extendCount: number | null
     isDeleted: boolean | null
     deletedAt: Date | null
-    tokenHash: string | null
   }
 
   export type InboxMaxAggregateOutputType = {
     id: string | null
+    sessionId: string | null
     address: string | null
     localPart: string | null
     domain: string | null
+    tokenHash: string | null
     createdAt: Date | null
     expiresAt: Date | null
     lastExtendedAt: Date | null
     extendCount: number | null
     isDeleted: boolean | null
     deletedAt: Date | null
-    tokenHash: string | null
   }
 
   export type InboxCountAggregateOutputType = {
     id: number
+    sessionId: number
     address: number
     localPart: number
     domain: number
+    tokenHash: number
     createdAt: number
     expiresAt: number
     lastExtendedAt: number
     extendCount: number
     isDeleted: number
     deletedAt: number
-    tokenHash: number
     _all: number
   }
 
@@ -1320,44 +2520,47 @@ export namespace Prisma {
 
   export type InboxMinAggregateInputType = {
     id?: true
+    sessionId?: true
     address?: true
     localPart?: true
     domain?: true
+    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
     extendCount?: true
     isDeleted?: true
     deletedAt?: true
-    tokenHash?: true
   }
 
   export type InboxMaxAggregateInputType = {
     id?: true
+    sessionId?: true
     address?: true
     localPart?: true
     domain?: true
+    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
     extendCount?: true
     isDeleted?: true
     deletedAt?: true
-    tokenHash?: true
   }
 
   export type InboxCountAggregateInputType = {
     id?: true
+    sessionId?: true
     address?: true
     localPart?: true
     domain?: true
+    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
     extendCount?: true
     isDeleted?: true
     deletedAt?: true
-    tokenHash?: true
     _all?: true
   }
 
@@ -1449,16 +2652,17 @@ export namespace Prisma {
 
   export type InboxGroupByOutputType = {
     id: string
+    sessionId: string
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt: Date
     expiresAt: Date
     lastExtendedAt: Date | null
     extendCount: number
     isDeleted: boolean
     deletedAt: Date | null
-    tokenHash: string
     _count: InboxCountAggregateOutputType | null
     _avg: InboxAvgAggregateOutputType | null
     _sum: InboxSumAggregateOutputType | null
@@ -1482,87 +2686,101 @@ export namespace Prisma {
 
   export type InboxSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    sessionId?: boolean
     address?: boolean
     localPart?: boolean
     domain?: boolean
+    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
     extendCount?: boolean
     isDeleted?: boolean
     deletedAt?: boolean
-    tokenHash?: boolean
+    session?: boolean | SessionDefaultArgs<ExtArgs>
     messages?: boolean | Inbox$messagesArgs<ExtArgs>
     _count?: boolean | InboxCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["inbox"]>
 
   export type InboxSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    sessionId?: boolean
     address?: boolean
     localPart?: boolean
     domain?: boolean
+    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
     extendCount?: boolean
     isDeleted?: boolean
     deletedAt?: boolean
-    tokenHash?: boolean
+    session?: boolean | SessionDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["inbox"]>
 
   export type InboxSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    sessionId?: boolean
     address?: boolean
     localPart?: boolean
     domain?: boolean
+    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
     extendCount?: boolean
     isDeleted?: boolean
     deletedAt?: boolean
-    tokenHash?: boolean
+    session?: boolean | SessionDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["inbox"]>
 
   export type InboxSelectScalar = {
     id?: boolean
+    sessionId?: boolean
     address?: boolean
     localPart?: boolean
     domain?: boolean
+    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
     extendCount?: boolean
     isDeleted?: boolean
     deletedAt?: boolean
-    tokenHash?: boolean
   }
 
-  export type InboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "address" | "localPart" | "domain" | "createdAt" | "expiresAt" | "lastExtendedAt" | "extendCount" | "isDeleted" | "deletedAt" | "tokenHash", ExtArgs["result"]["inbox"]>
+  export type InboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sessionId" | "address" | "localPart" | "domain" | "tokenHash" | "createdAt" | "expiresAt" | "lastExtendedAt" | "extendCount" | "isDeleted" | "deletedAt", ExtArgs["result"]["inbox"]>
   export type InboxInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    session?: boolean | SessionDefaultArgs<ExtArgs>
     messages?: boolean | Inbox$messagesArgs<ExtArgs>
     _count?: boolean | InboxCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type InboxIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type InboxIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type InboxIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    session?: boolean | SessionDefaultArgs<ExtArgs>
+  }
+  export type InboxIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    session?: boolean | SessionDefaultArgs<ExtArgs>
+  }
 
   export type $InboxPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Inbox"
     objects: {
+      session: Prisma.$SessionPayload<ExtArgs>
       messages: Prisma.$MessagePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
+      sessionId: string
       address: string
       localPart: string
       domain: string
+      tokenHash: string
       createdAt: Date
       expiresAt: Date
       lastExtendedAt: Date | null
       extendCount: number
       isDeleted: boolean
       deletedAt: Date | null
-      tokenHash: string
     }, ExtArgs["result"]["inbox"]>
     composites: {}
   }
@@ -1957,6 +3175,7 @@ export namespace Prisma {
    */
   export interface Prisma__InboxClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
+    session<T extends SessionDefaultArgs<ExtArgs> = {}>(args?: Subset<T, SessionDefaultArgs<ExtArgs>>): Prisma__SessionClient<$Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     messages<T extends Inbox$messagesArgs<ExtArgs> = {}>(args?: Subset<T, Inbox$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1988,16 +3207,17 @@ export namespace Prisma {
    */
   interface InboxFieldRefs {
     readonly id: FieldRef<"Inbox", 'String'>
+    readonly sessionId: FieldRef<"Inbox", 'String'>
     readonly address: FieldRef<"Inbox", 'String'>
     readonly localPart: FieldRef<"Inbox", 'String'>
     readonly domain: FieldRef<"Inbox", 'String'>
+    readonly tokenHash: FieldRef<"Inbox", 'String'>
     readonly createdAt: FieldRef<"Inbox", 'DateTime'>
     readonly expiresAt: FieldRef<"Inbox", 'DateTime'>
     readonly lastExtendedAt: FieldRef<"Inbox", 'DateTime'>
     readonly extendCount: FieldRef<"Inbox", 'Int'>
     readonly isDeleted: FieldRef<"Inbox", 'Boolean'>
     readonly deletedAt: FieldRef<"Inbox", 'DateTime'>
-    readonly tokenHash: FieldRef<"Inbox", 'String'>
   }
     
 
@@ -2252,6 +3472,10 @@ export namespace Prisma {
      */
     data: InboxCreateManyInput | InboxCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: InboxIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -2322,6 +3546,10 @@ export namespace Prisma {
      * Limit how many Inboxes to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: InboxIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -5960,18 +7188,30 @@ export namespace Prisma {
   export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+  export const SessionScalarFieldEnum: {
+    id: 'id',
+    tokenHash: 'tokenHash',
+    createdAt: 'createdAt',
+    lastExtendedAt: 'lastExtendedAt',
+    expiresAt: 'expiresAt'
+  };
+
+  export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
+
+
   export const InboxScalarFieldEnum: {
     id: 'id',
+    sessionId: 'sessionId',
     address: 'address',
     localPart: 'localPart',
     domain: 'domain',
+    tokenHash: 'tokenHash',
     createdAt: 'createdAt',
     expiresAt: 'expiresAt',
     lastExtendedAt: 'lastExtendedAt',
     extendCount: 'extendCount',
     isDeleted: 'isDeleted',
-    deletedAt: 'deletedAt',
-    tokenHash: 'tokenHash'
+    deletedAt: 'deletedAt'
   };
 
   export type InboxScalarFieldEnum = (typeof InboxScalarFieldEnum)[keyof typeof InboxScalarFieldEnum]
@@ -6138,36 +7378,95 @@ export namespace Prisma {
    */
 
 
+  export type SessionWhereInput = {
+    AND?: SessionWhereInput | SessionWhereInput[]
+    OR?: SessionWhereInput[]
+    NOT?: SessionWhereInput | SessionWhereInput[]
+    id?: StringFilter<"Session"> | string
+    tokenHash?: StringFilter<"Session"> | string
+    createdAt?: DateTimeFilter<"Session"> | Date | string
+    lastExtendedAt?: DateTimeNullableFilter<"Session"> | Date | string | null
+    expiresAt?: DateTimeFilter<"Session"> | Date | string
+    inboxes?: InboxListRelationFilter
+  }
+
+  export type SessionOrderByWithRelationInput = {
+    id?: SortOrder
+    tokenHash?: SortOrder
+    createdAt?: SortOrder
+    lastExtendedAt?: SortOrderInput | SortOrder
+    expiresAt?: SortOrder
+    inboxes?: InboxOrderByRelationAggregateInput
+  }
+
+  export type SessionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    tokenHash?: string
+    AND?: SessionWhereInput | SessionWhereInput[]
+    OR?: SessionWhereInput[]
+    NOT?: SessionWhereInput | SessionWhereInput[]
+    createdAt?: DateTimeFilter<"Session"> | Date | string
+    lastExtendedAt?: DateTimeNullableFilter<"Session"> | Date | string | null
+    expiresAt?: DateTimeFilter<"Session"> | Date | string
+    inboxes?: InboxListRelationFilter
+  }, "id" | "tokenHash">
+
+  export type SessionOrderByWithAggregationInput = {
+    id?: SortOrder
+    tokenHash?: SortOrder
+    createdAt?: SortOrder
+    lastExtendedAt?: SortOrderInput | SortOrder
+    expiresAt?: SortOrder
+    _count?: SessionCountOrderByAggregateInput
+    _max?: SessionMaxOrderByAggregateInput
+    _min?: SessionMinOrderByAggregateInput
+  }
+
+  export type SessionScalarWhereWithAggregatesInput = {
+    AND?: SessionScalarWhereWithAggregatesInput | SessionScalarWhereWithAggregatesInput[]
+    OR?: SessionScalarWhereWithAggregatesInput[]
+    NOT?: SessionScalarWhereWithAggregatesInput | SessionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Session"> | string
+    tokenHash?: StringWithAggregatesFilter<"Session"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"Session"> | Date | string
+    lastExtendedAt?: DateTimeNullableWithAggregatesFilter<"Session"> | Date | string | null
+    expiresAt?: DateTimeWithAggregatesFilter<"Session"> | Date | string
+  }
+
   export type InboxWhereInput = {
     AND?: InboxWhereInput | InboxWhereInput[]
     OR?: InboxWhereInput[]
     NOT?: InboxWhereInput | InboxWhereInput[]
     id?: StringFilter<"Inbox"> | string
+    sessionId?: StringFilter<"Inbox"> | string
     address?: StringFilter<"Inbox"> | string
     localPart?: StringFilter<"Inbox"> | string
     domain?: StringFilter<"Inbox"> | string
+    tokenHash?: StringFilter<"Inbox"> | string
     createdAt?: DateTimeFilter<"Inbox"> | Date | string
     expiresAt?: DateTimeFilter<"Inbox"> | Date | string
     lastExtendedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
     extendCount?: IntFilter<"Inbox"> | number
     isDeleted?: BoolFilter<"Inbox"> | boolean
     deletedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
-    tokenHash?: StringFilter<"Inbox"> | string
+    session?: XOR<SessionScalarRelationFilter, SessionWhereInput>
     messages?: MessageListRelationFilter
   }
 
   export type InboxOrderByWithRelationInput = {
     id?: SortOrder
+    sessionId?: SortOrder
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
+    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrderInput | SortOrder
     extendCount?: SortOrder
     isDeleted?: SortOrder
     deletedAt?: SortOrderInput | SortOrder
-    tokenHash?: SortOrder
+    session?: SessionOrderByWithRelationInput
     messages?: MessageOrderByRelationAggregateInput
   }
 
@@ -6178,6 +7477,7 @@ export namespace Prisma {
     AND?: InboxWhereInput | InboxWhereInput[]
     OR?: InboxWhereInput[]
     NOT?: InboxWhereInput | InboxWhereInput[]
+    sessionId?: StringFilter<"Inbox"> | string
     localPart?: StringFilter<"Inbox"> | string
     domain?: StringFilter<"Inbox"> | string
     createdAt?: DateTimeFilter<"Inbox"> | Date | string
@@ -6186,21 +7486,23 @@ export namespace Prisma {
     extendCount?: IntFilter<"Inbox"> | number
     isDeleted?: BoolFilter<"Inbox"> | boolean
     deletedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
+    session?: XOR<SessionScalarRelationFilter, SessionWhereInput>
     messages?: MessageListRelationFilter
   }, "id" | "address" | "tokenHash">
 
   export type InboxOrderByWithAggregationInput = {
     id?: SortOrder
+    sessionId?: SortOrder
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
+    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrderInput | SortOrder
     extendCount?: SortOrder
     isDeleted?: SortOrder
     deletedAt?: SortOrderInput | SortOrder
-    tokenHash?: SortOrder
     _count?: InboxCountOrderByAggregateInput
     _avg?: InboxAvgOrderByAggregateInput
     _max?: InboxMaxOrderByAggregateInput
@@ -6213,16 +7515,17 @@ export namespace Prisma {
     OR?: InboxScalarWhereWithAggregatesInput[]
     NOT?: InboxScalarWhereWithAggregatesInput | InboxScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"Inbox"> | string
+    sessionId?: StringWithAggregatesFilter<"Inbox"> | string
     address?: StringWithAggregatesFilter<"Inbox"> | string
     localPart?: StringWithAggregatesFilter<"Inbox"> | string
     domain?: StringWithAggregatesFilter<"Inbox"> | string
+    tokenHash?: StringWithAggregatesFilter<"Inbox"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Inbox"> | Date | string
     expiresAt?: DateTimeWithAggregatesFilter<"Inbox"> | Date | string
     lastExtendedAt?: DateTimeNullableWithAggregatesFilter<"Inbox"> | Date | string | null
     extendCount?: IntWithAggregatesFilter<"Inbox"> | number
     isDeleted?: BoolWithAggregatesFilter<"Inbox"> | boolean
     deletedAt?: DateTimeNullableWithAggregatesFilter<"Inbox"> | Date | string | null
-    tokenHash?: StringWithAggregatesFilter<"Inbox"> | string
   }
 
   export type MessageWhereInput = {
@@ -6491,33 +7794,95 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"IngestLog"> | Date | string
   }
 
+  export type SessionCreateInput = {
+    id?: string
+    tokenHash: string
+    createdAt?: Date | string
+    lastExtendedAt?: Date | string | null
+    expiresAt: Date | string
+    inboxes?: InboxCreateNestedManyWithoutSessionInput
+  }
+
+  export type SessionUncheckedCreateInput = {
+    id?: string
+    tokenHash: string
+    createdAt?: Date | string
+    lastExtendedAt?: Date | string | null
+    expiresAt: Date | string
+    inboxes?: InboxUncheckedCreateNestedManyWithoutSessionInput
+  }
+
+  export type SessionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    inboxes?: InboxUpdateManyWithoutSessionNestedInput
+  }
+
+  export type SessionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    inboxes?: InboxUncheckedUpdateManyWithoutSessionNestedInput
+  }
+
+  export type SessionCreateManyInput = {
+    id?: string
+    tokenHash: string
+    createdAt?: Date | string
+    lastExtendedAt?: Date | string | null
+    expiresAt: Date | string
+  }
+
+  export type SessionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SessionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type InboxCreateInput = {
     id?: string
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
     extendCount?: number
     isDeleted?: boolean
     deletedAt?: Date | string | null
-    tokenHash: string
+    session: SessionCreateNestedOneWithoutInboxesInput
     messages?: MessageCreateNestedManyWithoutInboxInput
   }
 
   export type InboxUncheckedCreateInput = {
     id?: string
+    sessionId: string
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
     extendCount?: number
     isDeleted?: boolean
     deletedAt?: Date | string | null
-    tokenHash: string
     messages?: MessageUncheckedCreateNestedManyWithoutInboxInput
   }
 
@@ -6526,43 +7891,46 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
+    session?: SessionUpdateOneRequiredWithoutInboxesNestedInput
     messages?: MessageUpdateManyWithoutInboxNestedInput
   }
 
   export type InboxUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sessionId?: StringFieldUpdateOperationsInput | string
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
     messages?: MessageUncheckedUpdateManyWithoutInboxNestedInput
   }
 
   export type InboxCreateManyInput = {
     id?: string
+    sessionId: string
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
     extendCount?: number
     isDeleted?: boolean
     deletedAt?: Date | string | null
-    tokenHash: string
   }
 
   export type InboxUpdateManyMutationInput = {
@@ -6570,27 +7938,28 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type InboxUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sessionId?: StringFieldUpdateOperationsInput | string
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type MessageCreateInput = {
@@ -6933,26 +8302,10 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
-  }
-
-  export type BoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type MessageListRelationFilter = {
-    every?: MessageWhereInput
-    some?: MessageWhereInput
-    none?: MessageWhereInput
+  export type InboxListRelationFilter = {
+    every?: InboxWhereInput
+    some?: InboxWhereInput
+    none?: InboxWhereInput
   }
 
   export type SortOrderInput = {
@@ -6960,58 +8313,32 @@ export namespace Prisma {
     nulls?: NullsOrder
   }
 
-  export type MessageOrderByRelationAggregateInput = {
+  export type InboxOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
-  export type InboxCountOrderByAggregateInput = {
+  export type SessionCountOrderByAggregateInput = {
     id?: SortOrder
-    address?: SortOrder
-    localPart?: SortOrder
-    domain?: SortOrder
-    createdAt?: SortOrder
-    expiresAt?: SortOrder
-    lastExtendedAt?: SortOrder
-    extendCount?: SortOrder
-    isDeleted?: SortOrder
-    deletedAt?: SortOrder
     tokenHash?: SortOrder
+    createdAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    expiresAt?: SortOrder
   }
 
-  export type InboxAvgOrderByAggregateInput = {
-    extendCount?: SortOrder
-  }
-
-  export type InboxMaxOrderByAggregateInput = {
+  export type SessionMaxOrderByAggregateInput = {
     id?: SortOrder
-    address?: SortOrder
-    localPart?: SortOrder
-    domain?: SortOrder
-    createdAt?: SortOrder
-    expiresAt?: SortOrder
-    lastExtendedAt?: SortOrder
-    extendCount?: SortOrder
-    isDeleted?: SortOrder
-    deletedAt?: SortOrder
     tokenHash?: SortOrder
+    createdAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    expiresAt?: SortOrder
   }
 
-  export type InboxMinOrderByAggregateInput = {
+  export type SessionMinOrderByAggregateInput = {
     id?: SortOrder
-    address?: SortOrder
-    localPart?: SortOrder
-    domain?: SortOrder
-    createdAt?: SortOrder
-    expiresAt?: SortOrder
-    lastExtendedAt?: SortOrder
-    extendCount?: SortOrder
-    isDeleted?: SortOrder
-    deletedAt?: SortOrder
     tokenHash?: SortOrder
-  }
-
-  export type InboxSumOrderByAggregateInput = {
-    extendCount?: SortOrder
+    createdAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    expiresAt?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -7058,6 +8385,90 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
+  export type SessionScalarRelationFilter = {
+    is?: SessionWhereInput
+    isNot?: SessionWhereInput
+  }
+
+  export type MessageListRelationFilter = {
+    every?: MessageWhereInput
+    some?: MessageWhereInput
+    none?: MessageWhereInput
+  }
+
+  export type MessageOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type InboxCountOrderByAggregateInput = {
+    id?: SortOrder
+    sessionId?: SortOrder
+    address?: SortOrder
+    localPart?: SortOrder
+    domain?: SortOrder
+    tokenHash?: SortOrder
+    createdAt?: SortOrder
+    expiresAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    extendCount?: SortOrder
+    isDeleted?: SortOrder
+    deletedAt?: SortOrder
+  }
+
+  export type InboxAvgOrderByAggregateInput = {
+    extendCount?: SortOrder
+  }
+
+  export type InboxMaxOrderByAggregateInput = {
+    id?: SortOrder
+    sessionId?: SortOrder
+    address?: SortOrder
+    localPart?: SortOrder
+    domain?: SortOrder
+    tokenHash?: SortOrder
+    createdAt?: SortOrder
+    expiresAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    extendCount?: SortOrder
+    isDeleted?: SortOrder
+    deletedAt?: SortOrder
+  }
+
+  export type InboxMinOrderByAggregateInput = {
+    id?: SortOrder
+    sessionId?: SortOrder
+    address?: SortOrder
+    localPart?: SortOrder
+    domain?: SortOrder
+    tokenHash?: SortOrder
+    createdAt?: SortOrder
+    expiresAt?: SortOrder
+    lastExtendedAt?: SortOrder
+    extendCount?: SortOrder
+    isDeleted?: SortOrder
+    deletedAt?: SortOrder
+  }
+
+  export type InboxSumOrderByAggregateInput = {
+    extendCount?: SortOrder
   }
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -7365,18 +8776,18 @@ export namespace Prisma {
     sizeBytes?: SortOrder
   }
 
-  export type MessageCreateNestedManyWithoutInboxInput = {
-    create?: XOR<MessageCreateWithoutInboxInput, MessageUncheckedCreateWithoutInboxInput> | MessageCreateWithoutInboxInput[] | MessageUncheckedCreateWithoutInboxInput[]
-    connectOrCreate?: MessageCreateOrConnectWithoutInboxInput | MessageCreateOrConnectWithoutInboxInput[]
-    createMany?: MessageCreateManyInboxInputEnvelope
-    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  export type InboxCreateNestedManyWithoutSessionInput = {
+    create?: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput> | InboxCreateWithoutSessionInput[] | InboxUncheckedCreateWithoutSessionInput[]
+    connectOrCreate?: InboxCreateOrConnectWithoutSessionInput | InboxCreateOrConnectWithoutSessionInput[]
+    createMany?: InboxCreateManySessionInputEnvelope
+    connect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
   }
 
-  export type MessageUncheckedCreateNestedManyWithoutInboxInput = {
-    create?: XOR<MessageCreateWithoutInboxInput, MessageUncheckedCreateWithoutInboxInput> | MessageCreateWithoutInboxInput[] | MessageUncheckedCreateWithoutInboxInput[]
-    connectOrCreate?: MessageCreateOrConnectWithoutInboxInput | MessageCreateOrConnectWithoutInboxInput[]
-    createMany?: MessageCreateManyInboxInputEnvelope
-    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  export type InboxUncheckedCreateNestedManyWithoutSessionInput = {
+    create?: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput> | InboxCreateWithoutSessionInput[] | InboxUncheckedCreateWithoutSessionInput[]
+    connectOrCreate?: InboxCreateOrConnectWithoutSessionInput | InboxCreateOrConnectWithoutSessionInput[]
+    createMany?: InboxCreateManySessionInputEnvelope
+    connect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -7391,6 +8802,54 @@ export namespace Prisma {
     set?: Date | string | null
   }
 
+  export type InboxUpdateManyWithoutSessionNestedInput = {
+    create?: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput> | InboxCreateWithoutSessionInput[] | InboxUncheckedCreateWithoutSessionInput[]
+    connectOrCreate?: InboxCreateOrConnectWithoutSessionInput | InboxCreateOrConnectWithoutSessionInput[]
+    upsert?: InboxUpsertWithWhereUniqueWithoutSessionInput | InboxUpsertWithWhereUniqueWithoutSessionInput[]
+    createMany?: InboxCreateManySessionInputEnvelope
+    set?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    disconnect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    delete?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    connect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    update?: InboxUpdateWithWhereUniqueWithoutSessionInput | InboxUpdateWithWhereUniqueWithoutSessionInput[]
+    updateMany?: InboxUpdateManyWithWhereWithoutSessionInput | InboxUpdateManyWithWhereWithoutSessionInput[]
+    deleteMany?: InboxScalarWhereInput | InboxScalarWhereInput[]
+  }
+
+  export type InboxUncheckedUpdateManyWithoutSessionNestedInput = {
+    create?: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput> | InboxCreateWithoutSessionInput[] | InboxUncheckedCreateWithoutSessionInput[]
+    connectOrCreate?: InboxCreateOrConnectWithoutSessionInput | InboxCreateOrConnectWithoutSessionInput[]
+    upsert?: InboxUpsertWithWhereUniqueWithoutSessionInput | InboxUpsertWithWhereUniqueWithoutSessionInput[]
+    createMany?: InboxCreateManySessionInputEnvelope
+    set?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    disconnect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    delete?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    connect?: InboxWhereUniqueInput | InboxWhereUniqueInput[]
+    update?: InboxUpdateWithWhereUniqueWithoutSessionInput | InboxUpdateWithWhereUniqueWithoutSessionInput[]
+    updateMany?: InboxUpdateManyWithWhereWithoutSessionInput | InboxUpdateManyWithWhereWithoutSessionInput[]
+    deleteMany?: InboxScalarWhereInput | InboxScalarWhereInput[]
+  }
+
+  export type SessionCreateNestedOneWithoutInboxesInput = {
+    create?: XOR<SessionCreateWithoutInboxesInput, SessionUncheckedCreateWithoutInboxesInput>
+    connectOrCreate?: SessionCreateOrConnectWithoutInboxesInput
+    connect?: SessionWhereUniqueInput
+  }
+
+  export type MessageCreateNestedManyWithoutInboxInput = {
+    create?: XOR<MessageCreateWithoutInboxInput, MessageUncheckedCreateWithoutInboxInput> | MessageCreateWithoutInboxInput[] | MessageUncheckedCreateWithoutInboxInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutInboxInput | MessageCreateOrConnectWithoutInboxInput[]
+    createMany?: MessageCreateManyInboxInputEnvelope
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  }
+
+  export type MessageUncheckedCreateNestedManyWithoutInboxInput = {
+    create?: XOR<MessageCreateWithoutInboxInput, MessageUncheckedCreateWithoutInboxInput> | MessageCreateWithoutInboxInput[] | MessageUncheckedCreateWithoutInboxInput[]
+    connectOrCreate?: MessageCreateOrConnectWithoutInboxInput | MessageCreateOrConnectWithoutInboxInput[]
+    createMany?: MessageCreateManyInboxInputEnvelope
+    connect?: MessageWhereUniqueInput | MessageWhereUniqueInput[]
+  }
+
   export type IntFieldUpdateOperationsInput = {
     set?: number
     increment?: number
@@ -7401,6 +8860,14 @@ export namespace Prisma {
 
   export type BoolFieldUpdateOperationsInput = {
     set?: boolean
+  }
+
+  export type SessionUpdateOneRequiredWithoutInboxesNestedInput = {
+    create?: XOR<SessionCreateWithoutInboxesInput, SessionUncheckedCreateWithoutInboxesInput>
+    connectOrCreate?: SessionCreateOrConnectWithoutInboxesInput
+    upsert?: SessionUpsertWithoutInboxesInput
+    connect?: SessionWhereUniqueInput
+    update?: XOR<XOR<SessionUpdateToOneWithWhereWithoutInboxesInput, SessionUpdateWithoutInboxesInput>, SessionUncheckedUpdateWithoutInboxesInput>
   }
 
   export type MessageUpdateManyWithoutInboxNestedInput = {
@@ -7561,22 +9028,6 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type NestedIntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
-  }
-
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -7592,6 +9043,17 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type NestedIntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -7631,6 +9093,11 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
@@ -7759,6 +9226,101 @@ export namespace Prisma {
     _max?: NestedEnumMessageStatusFilter<$PrismaModel>
   }
 
+  export type InboxCreateWithoutSessionInput = {
+    id?: string
+    address: string
+    localPart: string
+    domain: string
+    tokenHash: string
+    createdAt?: Date | string
+    expiresAt: Date | string
+    lastExtendedAt?: Date | string | null
+    extendCount?: number
+    isDeleted?: boolean
+    deletedAt?: Date | string | null
+    messages?: MessageCreateNestedManyWithoutInboxInput
+  }
+
+  export type InboxUncheckedCreateWithoutSessionInput = {
+    id?: string
+    address: string
+    localPart: string
+    domain: string
+    tokenHash: string
+    createdAt?: Date | string
+    expiresAt: Date | string
+    lastExtendedAt?: Date | string | null
+    extendCount?: number
+    isDeleted?: boolean
+    deletedAt?: Date | string | null
+    messages?: MessageUncheckedCreateNestedManyWithoutInboxInput
+  }
+
+  export type InboxCreateOrConnectWithoutSessionInput = {
+    where: InboxWhereUniqueInput
+    create: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput>
+  }
+
+  export type InboxCreateManySessionInputEnvelope = {
+    data: InboxCreateManySessionInput | InboxCreateManySessionInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type InboxUpsertWithWhereUniqueWithoutSessionInput = {
+    where: InboxWhereUniqueInput
+    update: XOR<InboxUpdateWithoutSessionInput, InboxUncheckedUpdateWithoutSessionInput>
+    create: XOR<InboxCreateWithoutSessionInput, InboxUncheckedCreateWithoutSessionInput>
+  }
+
+  export type InboxUpdateWithWhereUniqueWithoutSessionInput = {
+    where: InboxWhereUniqueInput
+    data: XOR<InboxUpdateWithoutSessionInput, InboxUncheckedUpdateWithoutSessionInput>
+  }
+
+  export type InboxUpdateManyWithWhereWithoutSessionInput = {
+    where: InboxScalarWhereInput
+    data: XOR<InboxUpdateManyMutationInput, InboxUncheckedUpdateManyWithoutSessionInput>
+  }
+
+  export type InboxScalarWhereInput = {
+    AND?: InboxScalarWhereInput | InboxScalarWhereInput[]
+    OR?: InboxScalarWhereInput[]
+    NOT?: InboxScalarWhereInput | InboxScalarWhereInput[]
+    id?: StringFilter<"Inbox"> | string
+    sessionId?: StringFilter<"Inbox"> | string
+    address?: StringFilter<"Inbox"> | string
+    localPart?: StringFilter<"Inbox"> | string
+    domain?: StringFilter<"Inbox"> | string
+    tokenHash?: StringFilter<"Inbox"> | string
+    createdAt?: DateTimeFilter<"Inbox"> | Date | string
+    expiresAt?: DateTimeFilter<"Inbox"> | Date | string
+    lastExtendedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
+    extendCount?: IntFilter<"Inbox"> | number
+    isDeleted?: BoolFilter<"Inbox"> | boolean
+    deletedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
+  }
+
+  export type SessionCreateWithoutInboxesInput = {
+    id?: string
+    tokenHash: string
+    createdAt?: Date | string
+    lastExtendedAt?: Date | string | null
+    expiresAt: Date | string
+  }
+
+  export type SessionUncheckedCreateWithoutInboxesInput = {
+    id?: string
+    tokenHash: string
+    createdAt?: Date | string
+    lastExtendedAt?: Date | string | null
+    expiresAt: Date | string
+  }
+
+  export type SessionCreateOrConnectWithoutInboxesInput = {
+    where: SessionWhereUniqueInput
+    create: XOR<SessionCreateWithoutInboxesInput, SessionUncheckedCreateWithoutInboxesInput>
+  }
+
   export type MessageCreateWithoutInboxInput = {
     id?: string
     fromAddress: string
@@ -7811,6 +9373,33 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type SessionUpsertWithoutInboxesInput = {
+    update: XOR<SessionUpdateWithoutInboxesInput, SessionUncheckedUpdateWithoutInboxesInput>
+    create: XOR<SessionCreateWithoutInboxesInput, SessionUncheckedCreateWithoutInboxesInput>
+    where?: SessionWhereInput
+  }
+
+  export type SessionUpdateToOneWithWhereWithoutInboxesInput = {
+    where?: SessionWhereInput
+    data: XOR<SessionUpdateWithoutInboxesInput, SessionUncheckedUpdateWithoutInboxesInput>
+  }
+
+  export type SessionUpdateWithoutInboxesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SessionUncheckedUpdateWithoutInboxesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type MessageUpsertWithWhereUniqueWithoutInboxInput = {
     where: MessageWhereUniqueInput
     update: XOR<MessageUpdateWithoutInboxInput, MessageUncheckedUpdateWithoutInboxInput>
@@ -7856,27 +9445,29 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
     extendCount?: number
     isDeleted?: boolean
     deletedAt?: Date | string | null
-    tokenHash: string
+    session: SessionCreateNestedOneWithoutInboxesInput
   }
 
   export type InboxUncheckedCreateWithoutMessagesInput = {
     id?: string
+    sessionId: string
     address: string
     localPart: string
     domain: string
+    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
     extendCount?: number
     isDeleted?: boolean
     deletedAt?: Date | string | null
-    tokenHash: string
   }
 
   export type InboxCreateOrConnectWithoutMessagesInput = {
@@ -7932,27 +9523,29 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
+    session?: SessionUpdateOneRequiredWithoutInboxesNestedInput
   }
 
   export type InboxUncheckedUpdateWithoutMessagesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sessionId?: StringFieldUpdateOperationsInput | string
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     extendCount?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    tokenHash?: StringFieldUpdateOperationsInput | string
   }
 
   export type AttachmentUpsertWithWhereUniqueWithoutMessageInput = {
@@ -8084,6 +9677,64 @@ export namespace Prisma {
     parsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type InboxCreateManySessionInput = {
+    id?: string
+    address: string
+    localPart: string
+    domain: string
+    tokenHash: string
+    createdAt?: Date | string
+    expiresAt: Date | string
+    lastExtendedAt?: Date | string | null
+    extendCount?: number
+    isDeleted?: boolean
+    deletedAt?: Date | string | null
+  }
+
+  export type InboxUpdateWithoutSessionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    address?: StringFieldUpdateOperationsInput | string
+    localPart?: StringFieldUpdateOperationsInput | string
+    domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extendCount?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    messages?: MessageUpdateManyWithoutInboxNestedInput
+  }
+
+  export type InboxUncheckedUpdateWithoutSessionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    address?: StringFieldUpdateOperationsInput | string
+    localPart?: StringFieldUpdateOperationsInput | string
+    domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extendCount?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    messages?: MessageUncheckedUpdateManyWithoutInboxNestedInput
+  }
+
+  export type InboxUncheckedUpdateManyWithoutSessionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    address?: StringFieldUpdateOperationsInput | string
+    localPart?: StringFieldUpdateOperationsInput | string
+    domain?: StringFieldUpdateOperationsInput | string
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    extendCount?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type MessageCreateManyInboxInput = {
