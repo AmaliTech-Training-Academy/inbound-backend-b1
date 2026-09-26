@@ -8,8 +8,10 @@ import prisma from "../../../configs/prisma.js";
 export const createInbox = asyncHandler(async (req, res) => {
   try {
     //token-hash generation
-    const token = generateToken();
-    const tokenHash = hashToken(token);
+    const inboxToken = generateToken();
+    const tokenHash = hashToken(inboxToken);
+    const sessionToken = generateToken();
+    const sessionTokenHash = hashToken(sessionToken);
     const expiresAt = new Date(Date.now() + INBOX_TTL_MINUTES * 60 * 1000);
 
     const MAX_ATTEMPTS = 5;
@@ -26,15 +28,26 @@ export const createInbox = asyncHandler(async (req, res) => {
             domain: MAIL_DOMAIN,
             expiresAt,
             tokenHash,
+            session: {
+              create: {
+                tokenHash: sessionTokenHash,
+                expiresAt,
+              },
+            },
           },
         });
 
         return res.status(201).json({
           success: true,
           data: {
+            session: {
+              token: sessionToken,
+              expiresAt: expiresAt,
+            },
             id: inbox.id,
             address: inbox.address,
-            token,
+            token: inboxToken,
+          
             expiresAt: inbox.expiresAt,
           },
         });
