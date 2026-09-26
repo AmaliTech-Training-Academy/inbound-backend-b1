@@ -58,6 +58,7 @@ export const fetchInboxMessages = asyncHandler(async (req, res) => {
       success: true,
       message: "Inbox messages fetched successfully",
       data: {
+        session: req.session,
         messages: messages.map(({ attachments, ...message }) => ({
           ...message,
           attachmentCount: attachments.length,
@@ -127,6 +128,7 @@ export const fetchMessage = asyncHandler(async (req, res) => {
       success: true,
       message: "Message Fetched Success",
       data: {
+        session: req.session,
         id: message.id,
         subject: message.subject,
         sender: message.fromName
@@ -194,6 +196,9 @@ export const readMessage = asyncHandler(async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Message marked as read",
+      data: {
+        session: req.session,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -241,16 +246,19 @@ if(!inbox){
     res.status(200).json({
       success: true,
       message: "Unread messages fetched successfully",
-      data: unreadMessages.map((message) => ({
-        id: message.id,
-        subject: message.subject,
-        sender: message.fromName
-          ? `${message.fromName} <${message.fromAddress}>`
-          : message.fromAddress,
-        to: message.toAddress,
-        receivedAt: message.receivedAt,
-        isRead: message.isRead,
-      })),
+      data: {
+        session: req.session,
+        messages: unreadMessages.map((message) => ({
+          id: message.id,
+          subject: message.subject,
+          sender: message.fromName
+            ? `${message.fromName} <${message.fromAddress}>`
+            : message.fromAddress,
+          to: message.toAddress,
+          receivedAt: message.receivedAt,
+          isRead: message.isRead,
+        })),
+      },
     });
   }
   catch (error) {

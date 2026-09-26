@@ -32,7 +32,17 @@ export const requireInboxAccess = async (req, res, next) => {
   const tokenHash = hashToken(token);
     const inbox = await prisma.inbox.findUnique({
       where: {
-    tokenHash,
+        tokenHash,
+      },
+      include: {
+        session: {
+          select: {
+            id: true,
+            createdAt: true,
+            expiresAt: true,
+            lastExtendedAt: true,
+          },
+        },
       },
     });
     if (!inbox) {
@@ -42,17 +52,28 @@ export const requireInboxAccess = async (req, res, next) => {
       });
     }
 
+    if (!inbox.session) {
+      return res.status(401).json({
+        success: false,
+        message: "Session Not Found",
+      });
+    }
+
+    if (new Date() >= inbox.session.expiresAt) {
+      return res.status(410).json({
+        success: false,
+        message: "Session has expired",
+      });
+    }
+
     if (new Date() >= inbox.expiresAt) {
       return res.status(410).json({
         success: false,
         message: "Inbox has expired",
       });
     }
-
-    
-
-    
     req.token = token;
+    req.session = inbox.session;
 
     next();
   } catch (error) {

@@ -71,6 +71,7 @@ describe("createInbox", () => {
         session: {
           create: {
             tokenHash: "session-token-hash",
+            expiresAt,
           },
         },
       }),
