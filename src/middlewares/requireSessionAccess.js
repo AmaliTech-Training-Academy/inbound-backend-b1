@@ -1,3 +1,6 @@
+import prisma from "../configs/prisma.js";
+import { hashToken } from "../utils/generateToken.js";
+
 export const requireSessionAccess = async (req, res, next) => {
     try {
         
@@ -34,9 +37,6 @@ export const requireSessionAccess = async (req, res, next) => {
       where: {
         tokenHash: sessionTokenHash,
       },
-      include: {
-        inbox: true,
-      },
     });
     if(!session) {
       return res.status(401).json({
@@ -58,6 +58,8 @@ export const requireSessionAccess = async (req, res, next) => {
             ...session,
             token: token,
         };
+
+        return next();
 
     } catch (error) {
         console.error("Error in requireSessionAccess middleware:", error);

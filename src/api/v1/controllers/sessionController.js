@@ -80,8 +80,15 @@ export const getSessionInboxes = asyncHandler(async (req, res) => {
         tokenHash: sessionTokenHash,
       },
       include: {
-        inboxes: true,
-        
+        inboxes: {
+          include: {
+            _count: {
+              select: {
+                messages: true,
+              },
+            },
+          },
+        },
       },
     });
 
