@@ -84,6 +84,7 @@ describe("createInbox", () => {
         token: "inbox-token",
         session: {
           token: "session-token",
+          expiresAt: expiresAt,
         },
         expiresAt,
       },
