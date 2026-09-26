@@ -16,7 +16,7 @@ model Session {
 
   createdAt      DateTime  @default(now())
   lastExtendedAt DateTime?
-  expiresAt   DateTime
+  expiresAt      DateTime
 
   @@index([tokenHash])
 }
