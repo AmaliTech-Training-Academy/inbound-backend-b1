@@ -10,10 +10,14 @@ generator client {
 model Session {
   id String @id @default(uuid())
 
+  tokenHash String @unique
+
   inboxes Inbox[]
 
   createdAt      DateTime  @default(now())
   lastExtendedAt DateTime?
+
+  @@index([tokenHash])
 }
 
 model Inbox {
@@ -26,16 +30,15 @@ model Inbox {
   localPart String
   domain    String
 
-  createdAt DateTime @default(now())
-  expiresAt DateTime
+  tokenHash String @unique
 
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
   lastExtendedAt DateTime?
   extendCount    Int       @default(0)
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-
-  tokenHash String @unique
 
   messages Message[]
 
@@ -49,6 +52,7 @@ model Message {
   id String @id @default(uuid())
 
   inboxId String
+  inbox   Inbox  @relation(fields: [inboxId], references: [id], onDelete: Cascade)
 
   fromAddress String
   fromName    String?
@@ -74,8 +78,6 @@ model Message {
 
   errorMessage String?
 
-  inbox Inbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
-
   attachments Attachment[]
 
   @@index([inboxId, receivedAt])
@@ -88,6 +90,7 @@ model Attachment {
   id String @id @default(uuid())
 
   messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   filename    String
   contentType String
@@ -98,8 +101,6 @@ model Attachment {
 
   createdAt DateTime @default(now())
   expiresAt DateTime
-
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([expiresAt])
