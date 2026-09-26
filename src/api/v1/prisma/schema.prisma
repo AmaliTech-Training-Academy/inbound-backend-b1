@@ -7,8 +7,20 @@ generator client {
   output   = "../../../configs/generated/prisma"
 }
 
+model Session {
+  id String @id @default(uuid())
+
+  inboxes Inbox[]
+
+  createdAt      DateTime  @default(now())
+  lastExtendedAt DateTime?
+}
+
 model Inbox {
   id String @id @default(uuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   address   String @unique
   localPart String
@@ -27,6 +39,7 @@ model Inbox {
 
   messages Message[]
 
+  @@index([sessionId])
   @@index([expiresAt])
   @@index([domain, localPart])
   @@index([isDeleted, expiresAt])
