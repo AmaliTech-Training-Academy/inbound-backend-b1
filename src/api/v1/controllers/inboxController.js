@@ -44,7 +44,6 @@ export const createInbox = asyncHandler(async (req, res) => {
               token: sessionToken,
               expiresAt: expiresAt,
             },
-            id: inbox.id,
             address: inbox.address,
             token: inboxToken,
           
