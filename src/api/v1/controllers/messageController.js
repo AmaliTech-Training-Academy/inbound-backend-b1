@@ -1,38 +1,20 @@
 import asyncHandler from "express-async-handler";
 import prisma from "../../../configs/prisma.js";
-import { hashToken } from "../../../utils/generateToken.js";
 import { sanitizeHtmlBody } from "../services/mailParserService.js";
+
+const activeSessionInboxFilter = (req) => ({
+  is: {
+    sessionId: req.session.id,
+    isDeleted: false,
+    expiresAt: { gt: new Date() },
+    ...(req.query?.inboxId ? { id: req.query.inboxId } : {}),
+  },
+});
 
 export const fetchInboxMessages = asyncHandler(async (req, res) => {
   try {
-    const token = hashToken(req.token);
-
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing Token",
-      });
-    }
-
-    const inbox = await prisma.inbox.findUnique({
-      where: {
-        tokenHash: token,
-      },
-      select: {
-        id: true,
-      },
-    });
-    if (!inbox) {
-      return res.status(404).json({
-        success: false,
-        message: "Inbox Not Found",
-      });
-    }
-
     const messages = await prisma.message.findMany({
-        where: {
-          inboxId: inbox.id,
-        },
+        where: { inbox: activeSessionInboxFilter(req) },
         select: {
           id: true,
           subject: true,
@@ -58,6 +40,7 @@ export const fetchInboxMessages = asyncHandler(async (req, res) => {
       success: true,
       message: "Inbox messages fetched successfully",
       data: {
+        session: req.session,
         messages: messages.map(({ attachments, ...message }) => ({
           ...message,
           attachmentCount: attachments.length,
@@ -77,8 +60,6 @@ export const fetchInboxMessages = asyncHandler(async (req, res) => {
 export const fetchMessage = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const token = hashToken(req.token);
-
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -86,29 +67,10 @@ export const fetchMessage = asyncHandler(async (req, res) => {
       });
     }
 
-    if (!token) {
-      return res.status(400).json({
-        success: false,
-        message: "Token Message Id",
-      });
-    }
-
-    const inbox = await prisma.inbox.findUnique({
-      where: {
-        tokenHash: token,
-      },
-    });
-    if (!inbox) {
-      return res.status(404).json({
-        success: false,
-        message: "Inbox Not Found",
-      });
-    }
-    const inboxId = inbox.id;
-    const message = await prisma.message.findUnique({
+    const message = await prisma.message.findFirst({
       where: {
         id,
-        inboxId,
+        inbox: activeSessionInboxFilter(req),
       },
       include: {
         inbox: true,
@@ -127,7 +89,8 @@ export const fetchMessage = asyncHandler(async (req, res) => {
       success: true,
       message: "Message Fetched Success",
       data: {
-        id: message.id,
+        // session: req.session,
+        // id: message.id,
         subject: message.subject,
         sender: message.fromName
           ? `${message.fromName} <${message.fromAddress}>`
@@ -167,25 +130,25 @@ export const fetchMessage = asyncHandler(async (req, res) => {
 export const readMessage = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const token = hashToken(req.token);
-
     if (!id) {
       return res.status(400).json({
         success: false,
         message: "Missing Message Id",
       });
     }
-    if (!token) {
-      return res.status(400).json({
+    const ownedMessage = await prisma.message.findFirst({
+      where: { id, inbox: activeSessionInboxFilter(req) },
+      select: { id: true },
+    });
+    if (!ownedMessage) {
+      return res.status(404).json({
         success: false,
-        message: "Token Message Id",
+        message: "Message Not Found",
       });
     }
 
     await prisma.message.update({
-      where: {
-        id,
-      },
+      where: { id: ownedMessage.id },
       data: {
         isRead: true,
       },
@@ -194,6 +157,9 @@ export const readMessage = asyncHandler(async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Message marked as read",
+      data: {
+        session: req.session,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -206,31 +172,9 @@ export const readMessage = asyncHandler(async (req, res) => {
 
 export const fetchAllUnreadMessages = asyncHandler(async (req, res) => {
   try {
-    const token = hashToken(req.token);
-if(!token){
-  return res.status(400).json({
-    success: false,
-    message: "Token Message Id",
-  });
-}
-
-    const inbox = await prisma.inbox.findUnique({
-      where: {
-        tokenHash: token,
-      },
-    });
-if(!inbox){
-  return res.status(404).json({
-    success: false, 
-    message: "Inbox Not Found",
-  });
-}
-
-
-    const inboxId = inbox.id;
     const unreadMessages = await prisma.message.findMany({
       where: {
-        inboxId,
+        inbox: activeSessionInboxFilter(req),
         isRead: false,
       },
       orderBy: {
@@ -241,16 +185,19 @@ if(!inbox){
     res.status(200).json({
       success: true,
       message: "Unread messages fetched successfully",
-      data: unreadMessages.map((message) => ({
-        id: message.id,
-        subject: message.subject,
-        sender: message.fromName
-          ? `${message.fromName} <${message.fromAddress}>`
-          : message.fromAddress,
-        to: message.toAddress,
-        receivedAt: message.receivedAt,
-        isRead: message.isRead,
-      })),
+      data: {
+        session: req.session,
+        messages: unreadMessages.map((message) => ({
+          id: message.id,
+          subject: message.subject,
+          sender: message.fromName
+            ? `${message.fromName} <${message.fromAddress}>`
+            : message.fromAddress,
+          to: message.toAddress,
+          receivedAt: message.receivedAt,
+          isRead: message.isRead,
+        })),
+      },
     });
   }
   catch (error) {

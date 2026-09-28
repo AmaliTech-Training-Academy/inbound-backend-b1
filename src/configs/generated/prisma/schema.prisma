@@ -7,26 +7,41 @@ generator client {
   output   = "../../../configs/generated/prisma"
 }
 
+model Session {
+  id String @id @default(uuid())
+
+  tokenHash String @unique
+
+  inboxes Inbox[]
+
+  createdAt      DateTime  @default(now())
+  lastExtendedAt DateTime?
+  expiresAt      DateTime
+
+  @@index([tokenHash])
+}
+
 model Inbox {
   id String @id @default(uuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   address   String @unique
   localPart String
   domain    String
 
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
   lastExtendedAt DateTime?
   extendCount    Int       @default(0)
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
 
-  tokenHash String @unique
-
   messages Message[]
 
+  @@index([sessionId])
   @@index([expiresAt])
   @@index([domain, localPart])
   @@index([isDeleted, expiresAt])
@@ -36,6 +51,7 @@ model Message {
   id String @id @default(uuid())
 
   inboxId String
+  inbox   Inbox  @relation(fields: [inboxId], references: [id], onDelete: Cascade)
 
   fromAddress String
   fromName    String?
@@ -61,8 +77,6 @@ model Message {
 
   errorMessage String?
 
-  inbox Inbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
-
   attachments Attachment[]
 
   @@index([inboxId, receivedAt])
@@ -75,6 +89,7 @@ model Attachment {
   id String @id @default(uuid())
 
   messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   filename    String
   contentType String
@@ -85,8 +100,6 @@ model Attachment {
 
   createdAt DateTime @default(now())
   expiresAt DateTime
-
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([expiresAt])

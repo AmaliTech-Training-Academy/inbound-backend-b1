@@ -37,12 +37,20 @@ import {
   fetchInboxMessages,
   fetchMessage,
   readMessage,
+  fetchAllUnreadMessages,
 } from "../src/api/v1/controllers/messageController.js";
 
 const createResponse = () => ({
   status: vi.fn().mockReturnThis(),
   json: vi.fn().mockReturnThis(),
 });
+
+const session = {
+  id: "session-123",
+  createdAt: new Date("2026-09-16T09:00:00.000Z"),
+  expiresAt: new Date("2026-09-20T10:00:00.000Z"),
+  lastExtendedAt: null,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -73,6 +81,7 @@ describe("fetchInboxMessages", () => {
 
     const req = {
       token: "test-token",
+      session,
     };
 
     const res = createResponse();
@@ -117,6 +126,7 @@ describe("fetchInboxMessages", () => {
       success: true,
       message: "Inbox messages fetched successfully",
       data: {
+        session,
         messages: [
           {
             id: "message-123",
@@ -288,6 +298,7 @@ describe("fetchMessage", () => {
         id: "message-123",
       },
       token: "test-token",
+      session,
     };
 
     const res = createResponse();
@@ -321,6 +332,7 @@ describe("fetchMessage", () => {
       success: true,
       message: "Message Fetched Success",
       data: {
+        session,
         id: "message-123",
         subject: "Welcome to our service",
         sender: "John Doe <john@example.com>",
@@ -478,6 +490,7 @@ describe("readMessage", () => {
         id: "message-123",
       },
       token: "test-token",
+      session,
     };
 
     const res = createResponse();
@@ -500,6 +513,9 @@ describe("readMessage", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       message: "Message marked as read",
+      data: {
+        session,
+      },
     });
   });
 
@@ -524,6 +540,49 @@ describe("readMessage", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       message: "Error marking message as read",
+    });
+  });
+});
+
+describe("fetchAllUnreadMessages", () => {
+  it("returns unread messages with session metadata", async () => {
+    prismaMock.inbox.findUnique.mockResolvedValue({ id: "inbox-123" });
+    prismaMock.message.findMany.mockResolvedValue([
+      {
+        id: "message-123",
+        subject: "Welcome",
+        fromName: null,
+        fromAddress: "sender@example.com",
+        toAddress: "test@example.com",
+        receivedAt: new Date("2026-09-16T10:00:00.000Z"),
+        isRead: false,
+      },
+    ]);
+
+    const req = {
+      token: "test-token",
+      session,
+    };
+    const res = createResponse();
+
+    await fetchAllUnreadMessages(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      message: "Unread messages fetched successfully",
+      data: {
+        session,
+        messages: [
+          {
+            id: "message-123",
+            subject: "Welcome",
+            sender: "sender@example.com",
+            to: "test@example.com",
+            receivedAt: new Date("2026-09-16T10:00:00.000Z"),
+            isRead: false,
+          },
+        ],
+      },
     });
   });
 });

@@ -126,15 +126,16 @@ This endpoint confirms that the Express process is responding. It does not perfo
 POST /api/v1/inbox
 ```
 
-No request body is required.
+No request body is required. Optionally send `Authorization: Bearer <session-token>` to add the inbox to an existing session. A valid session is reused; if it has expired or cannot be found, a new session is created and returned.
 
 The service:
 
-1. Generates a cryptographically random token.
-2. Stores only the SHA-256 hash of that token.
-3. Generates a randomized local part from name-based patterns, letters, digits, and a uniqueness suffix.
-4. Creates the address using `DOMAIN_ADDRESS`.
-5. Sets expiration using `INBOX_TTL_MINUTES`.
+1. Generates a cryptographically random inbox token.
+2. Reuses a valid supplied session, or generates a new cryptographically random session token when needed.
+3. Stores only the SHA-256 hashes of newly generated tokens.
+4. Generates a randomized local part from name-based patterns, letters, digits, and a uniqueness suffix.
+5. Creates the address using `DOMAIN_ADDRESS`.
+6. Sets expiration using `INBOX_TTL_MINUTES` and ensures the reused session lasts at least as long as the new inbox.
 
 Response `201`:
 
@@ -142,6 +143,10 @@ Response `201`:
 {
   "success": true,
   "data": {
+    "session": {
+      "token": "raw-session-token-returned-once",
+      "expiresAt": "2026-09-16T14:00:00.000Z"
+    },
     "id": "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
     "address": "generated-address@example.com",
     "token": "raw-token-returned-once",
@@ -150,7 +155,7 @@ Response `201`:
 }
 ```
 
-The raw token is returned only in this response. Clients should store it securely and send it as a bearer token for subsequent inbox operations.
+The raw inbox and session tokens are returned only in this response. Clients should store them securely. The inbox token remains the bearer token for current inbox and message operations.
 
 Possible failure: `500` when address creation or persistence fails.
 
@@ -231,6 +236,12 @@ Response `200`:
   "success": true,
   "message": "Message Fetched Success",
   "data": {
+    "session": {
+      "id": "session-uuid",
+      "createdAt": "2026-09-16T13:00:00.000Z",
+      "expiresAt": "2026-09-16T14:00:00.000Z",
+      "lastExtendedAt": null
+    },
     "id": "message-uuid",
     "subject": "Verification code",
     "sender": "Example Sender <sender@example.com>",
@@ -272,7 +283,15 @@ Response `200`:
 ```json
 {
   "success": true,
-  "message": "Message marked as read"
+  "message": "Message marked as read",
+  "data": {
+    "session": {
+      "id": "session-uuid",
+      "createdAt": "2026-09-16T13:00:00.000Z",
+      "expiresAt": "2026-09-16T14:00:00.000Z",
+      "lastExtendedAt": null
+    }
+  }
 }
 ```
 
