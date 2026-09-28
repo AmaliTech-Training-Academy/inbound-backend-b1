@@ -128,8 +128,8 @@ export const fetchMessage = asyncHandler(async (req, res) => {
       success: true,
       message: "Message Fetched Success",
       data: {
-        session: req.session,
-        id: message.id,
+        // session: req.session,
+        // id: message.id,
         subject: message.subject,
         sender: message.fromName
           ? `${message.fromName} <${message.fromAddress}>`
