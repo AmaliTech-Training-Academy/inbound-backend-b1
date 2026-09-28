@@ -13,10 +13,6 @@ export const createInbox = asyncHandler(async (req, res) => {
     const MAX_ATTEMPTS = 5;
     const expiresAt = new Date(Date.now() + INBOX_TTL_MINUTES * 60 * 1000);
 
-
-
-
-   
     const authorization = req.headers?.authorization;
     const providedSessionToken = authorization?.startsWith("Bearer ")
       ? authorization.substring(7).trim()
@@ -36,15 +32,14 @@ export const createInbox = asyncHandler(async (req, res) => {
     }
 
     const reuseSession = Boolean(
-      session && providedSessionToken && new Date() < session.expiresAt
+      session && providedSessionToken && new Date() < session.expiresAt,
     );
     const sessionToken = reuseSession ? providedSessionToken : generateToken();
     const sessionTokenHash = reuseSession ? null : hashToken(sessionToken);
-    const sessionExpiresAt = reuseSession && session.expiresAt > expiresAt
-      ? session.expiresAt
-      : expiresAt;
-
-
+    const sessionExpiresAt =
+      reuseSession && session.expiresAt > expiresAt
+        ? session.expiresAt
+        : expiresAt;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const { localPart, address } = generateAddress(MAIL_DOMAIN);
@@ -88,7 +83,7 @@ export const createInbox = asyncHandler(async (req, res) => {
             },
             address: inbox.address,
             token: inboxToken,
-          
+
             expiresAt: inbox.expiresAt,
           },
         });
@@ -122,8 +117,8 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
         tokenHash: decodedToken,
       },
       include: {
-        messages:true
-      }
+        messages: true,
+      },
     });
 
     if (!inbox) {
@@ -154,13 +149,13 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
       data: {
         address: inbox.address,
         localPart: inbox.localPart,
-        extendCount :inbox.extendCount,
+        extendCount: inbox.extendCount,
         domain: inbox.domain,
         createdAt: inbox.createdAt,
         expiresAt: inbox.expiresAt,
         message: {
           count: inbox.messages.length,
-        }
+        },
       },
     });
   } catch (error) {
@@ -171,8 +166,7 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
   }
 });
 
-
-export const extendInboxTime = asyncHandler(async(req,res) => {
+export const extendInboxTime = asyncHandler(async (req, res) => {
   try {
     const tokenHash = hashToken(req.token);
     const inbox = await prisma.inbox.findUnique({
@@ -204,7 +198,7 @@ export const extendInboxTime = asyncHandler(async(req,res) => {
     const now = new Date();
     const baseTime = inbox.expiresAt > now ? inbox.expiresAt : now;
     const expiresAt = new Date(
-      baseTime.getTime() + extensionMinutes * 60 * 1000
+      baseTime.getTime() + extensionMinutes * 60 * 1000,
     );
 
     const sessionExpiresAt =
