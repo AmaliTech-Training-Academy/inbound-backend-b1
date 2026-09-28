@@ -126,15 +126,16 @@ This endpoint confirms that the Express process is responding. It does not perfo
 POST /api/v1/inbox
 ```
 
-No request body is required.
+No request body is required. Optionally send `Authorization: Bearer <session-token>` to add the inbox to an existing session. A valid session is reused; if it has expired or cannot be found, a new session is created and returned.
 
 The service:
 
-1. Generates cryptographically random inbox and session tokens.
-2. Stores only the SHA-256 hashes of those tokens.
-3. Generates a randomized local part from name-based patterns, letters, digits, and a uniqueness suffix.
-4. Creates the address using `DOMAIN_ADDRESS`.
-5. Sets expiration using `INBOX_TTL_MINUTES`.
+1. Generates a cryptographically random inbox token.
+2. Reuses a valid supplied session, or generates a new cryptographically random session token when needed.
+3. Stores only the SHA-256 hashes of newly generated tokens.
+4. Generates a randomized local part from name-based patterns, letters, digits, and a uniqueness suffix.
+5. Creates the address using `DOMAIN_ADDRESS`.
+6. Sets expiration using `INBOX_TTL_MINUTES` and ensures the reused session lasts at least as long as the new inbox.
 
 Response `201`:
 

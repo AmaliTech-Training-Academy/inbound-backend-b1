@@ -10,39 +10,81 @@ export const createInbox = asyncHandler(async (req, res) => {
     //token-hash generation
     const inboxToken = generateToken();
     const tokenHash = hashToken(inboxToken);
-    const sessionToken = generateToken();
-    const sessionTokenHash = hashToken(sessionToken);
+    const MAX_ATTEMPTS = 5;
     const expiresAt = new Date(Date.now() + INBOX_TTL_MINUTES * 60 * 1000);
 
-    const MAX_ATTEMPTS = 5;
-    //email address generation
+
+
+
+   
+    const authorization = req.headers?.authorization;
+    const providedSessionToken = authorization?.startsWith("Bearer ")
+      ? authorization.substring(7).trim()
+      : null;
+    let session = null;
+
+    if (!session && providedSessionToken) {
+      session = await prisma.session.findUnique({
+        where: { tokenHash: hashToken(providedSessionToken) },
+      });
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: "Session Not Found",
+        });
+      }
+    }
+
+    const reuseSession = Boolean(
+      session && providedSessionToken && new Date() < session.expiresAt
+    );
+    const sessionToken = reuseSession ? providedSessionToken : generateToken();
+    const sessionTokenHash = reuseSession ? null : hashToken(sessionToken);
+    const sessionExpiresAt = reuseSession && session.expiresAt > expiresAt
+      ? session.expiresAt
+      : expiresAt;
+
+
+
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const { localPart, address } = generateAddress(MAIL_DOMAIN);
 
       try {
         //inbox creating in db
-        const inbox = await prisma.inbox.create({
-          data: {
-            address,
-            localPart,
-            domain: MAIL_DOMAIN,
-            expiresAt,
-            tokenHash,
-            session: {
-              create: {
-                tokenHash: sessionTokenHash,
-                expiresAt,
+        const data = {
+          address,
+          localPart,
+          domain: MAIL_DOMAIN,
+          expiresAt,
+          tokenHash,
+          session: reuseSession
+            ? { connect: { id: session.id } }
+            : {
+                create: {
+                  tokenHash: sessionTokenHash,
+                  expiresAt,
+                },
               },
-            },
-          },
-        });
+        };
+        const inbox = reuseSession
+          ? await prisma.$transaction(async (transaction) => {
+              const createdInbox = await transaction.inbox.create({ data });
+              if (session.expiresAt < expiresAt) {
+                await transaction.session.update({
+                  where: { id: session.id },
+                  data: { expiresAt },
+                });
+              }
+              return createdInbox;
+            })
+          : await prisma.inbox.create({ data });
 
         return res.status(201).json({
           success: true,
           data: {
             session: {
               token: sessionToken,
-              expiresAt: expiresAt,
+              expiresAt: sessionExpiresAt,
             },
             address: inbox.address,
             token: inboxToken,
