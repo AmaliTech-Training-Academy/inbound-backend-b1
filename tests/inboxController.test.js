@@ -269,7 +269,7 @@ describe("extendInboxTime", () => {
     });
 
     const req = {
-      query: { inboxId: "inbox-123" },
+      params: { id: "inbox-123" },
       session: { id: "session-123" },
     };
     const res = createResponse();
@@ -278,13 +278,6 @@ describe("extendInboxTime", () => {
 
     expect(prismaMock.inbox.findFirst).toHaveBeenCalledWith({
       where: { id: "inbox-123", sessionId: "session-123" },
-      include: {
-        session: {
-          select: {
-            expiresAt: true,
-          },
-        },
-      },
       include: {
         session: {
           select: {
