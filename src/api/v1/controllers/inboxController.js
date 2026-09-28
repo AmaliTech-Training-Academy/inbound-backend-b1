@@ -135,6 +135,13 @@ export const extendInboxTime = asyncHandler(async(req,res) => {
     const tokenHash = hashToken(req.token);
     const inbox = await prisma.inbox.findUnique({
       where: { tokenHash },
+      include: {
+        session: {
+          select: {
+            expiresAt: true,
+          },
+        },
+      },
     });
 
     if (!inbox) {
@@ -158,13 +165,28 @@ export const extendInboxTime = asyncHandler(async(req,res) => {
       baseTime.getTime() + extensionMinutes * 60 * 1000
     );
 
-    const updatedInbox = await prisma.inbox.update({
-      where: { tokenHash },
-      data: {
-        expiresAt,
-        lastExtendedAt: now,
-        extendCount: { increment: 1 },
-      },
+    const sessionExpiresAt =
+      inbox.session.expiresAt > expiresAt ? inbox.session.expiresAt : expiresAt;
+
+    const updatedInbox = await prisma.$transaction(async (transaction) => {
+      const updatedInboxRecord = await transaction.inbox.update({
+        where: { tokenHash },
+        data: {
+          expiresAt,
+          lastExtendedAt: now,
+          extendCount: { increment: 1 },
+        },
+      });
+
+      await transaction.session.update({
+        where: { id: inbox.sessionId },
+        data: {
+          expiresAt: sessionExpiresAt,
+          lastExtendedAt: now,
+        },
+      });
+
+      return updatedInboxRecord;
     });
 
     return res.status(200).json({
