@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prismaMock, hashTokenMock } = vi.hoisted(() => ({
   prismaMock: {
-    inbox: {
+    session: {
       findUnique: vi.fn(),
     },
   },
@@ -30,14 +30,11 @@ beforeEach(() => {
 });
 
 describe("requireInboxAccess", () => {
-  it("rejects a request when the attached session has expired", async () => {
-    prismaMock.inbox.findUnique.mockResolvedValue({
-      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
-      session: {
-        expiresAt: new Date("2000-01-01T00:00:00.000Z"),
-      },
+  it("rejects a request when the session token has expired", async () => {
+    prismaMock.session.findUnique.mockResolvedValue({
+      expiresAt: new Date("2000-01-01T00:00:00.000Z"),
     });
-    const req = { headers: { authorization: "Bearer inbox-token" } };
+    const req = { headers: { authorization: "Bearer session-token" } };
     const res = createResponse();
     const next = vi.fn();
 
@@ -46,30 +43,26 @@ describe("requireInboxAccess", () => {
     expect(res.status).toHaveBeenCalledWith(410);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Session has expired",
+      message: "Session Expired",
     });
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("attaches the active session and continues", async () => {
+  it("authenticates with the session token and continues", async () => {
     const session = {
       id: "session-123",
       createdAt: new Date("2026-09-26T00:00:00.000Z"),
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
       lastExtendedAt: null,
     };
-    prismaMock.inbox.findUnique.mockResolvedValue({
-      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
-      session,
-    });
-    const req = { headers: { authorization: "Bearer inbox-token" } };
+    prismaMock.session.findUnique.mockResolvedValue(session);
+    const req = { headers: { authorization: "Bearer session-token" } };
     const res = createResponse();
     const next = vi.fn();
 
     await requireInboxAccess(req, res, next);
 
-    expect(req.token).toBe("inbox-token");
-    expect(req.session).toBe(session);
+    expect(req.session).toEqual({ ...session, token: "session-token" });
     expect(next).toHaveBeenCalledOnce();
   });
 });

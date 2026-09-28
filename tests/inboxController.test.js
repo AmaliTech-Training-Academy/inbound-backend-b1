@@ -9,6 +9,7 @@ const {
   prismaMock: {
     inbox: {
       create: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -65,9 +66,7 @@ afterEach(() => {
 
 describe("createInbox", () => {
   it("creates a session and inbox and returns both tokens", async () => {
-    generateTokenMock
-      .mockReturnValueOnce("inbox-token")
-      .mockReturnValueOnce("session-token");
+    generateTokenMock.mockReturnValueOnce("session-token");
     generateAddressMock.mockReturnValue({
       localPart: "generated",
       address: "generated@inbound.example.test",
@@ -88,7 +87,6 @@ describe("createInbox", () => {
         address: "generated@inbound.example.test",
         localPart: "generated",
         domain: "inbound.example.test",
-        tokenHash: "inbox-token-hash",
         session: {
           create: {
             tokenHash: "session-token-hash",
@@ -105,7 +103,7 @@ describe("createInbox", () => {
       success: true,
       data: expect.objectContaining({
         address: "generated@inbound.example.test",
-        token: "inbox-token",
+        id: "inbox-123",
         session: {
           token: "session-token",
           expiresAt: createData.expiresAt,
@@ -117,7 +115,6 @@ describe("createInbox", () => {
 
   it("adds an inbox to a provided session that has not expired", async () => {
     const sessionExpiresAt = new Date(Date.now() + 60 * 1000);
-    generateTokenMock.mockReturnValueOnce("inbox-token");
     generateAddressMock.mockReturnValue({
       localPart: "generated",
       address: "generated@inbound.example.test",
@@ -160,7 +157,6 @@ describe("createInbox", () => {
   });
 
   it("returns not found when the provided session token is unknown", async () => {
-    generateTokenMock.mockReturnValueOnce("inbox-token");
     prismaMock.session.findUnique.mockResolvedValue(null);
 
     const req = { headers: { authorization: "Bearer unknown-session-token" } };
@@ -174,13 +170,11 @@ describe("createInbox", () => {
       message: "Session Not Found",
     });
     expect(prismaMock.inbox.create).not.toHaveBeenCalled();
-    expect(generateTokenMock).toHaveBeenCalledTimes(1);
+    expect(generateTokenMock).not.toHaveBeenCalled();
   });
 
   it("creates a new session when the provided session has expired", async () => {
-    generateTokenMock
-      .mockReturnValueOnce("inbox-token")
-      .mockReturnValueOnce("new-session-token");
+    generateTokenMock.mockReturnValueOnce("new-session-token");
     generateAddressMock.mockReturnValue({
       localPart: "generated",
       address: "generated@inbound.example.test",
@@ -217,9 +211,7 @@ describe("createInbox", () => {
   });
 
   it("does not reuse a session object without its bearer token", async () => {
-    generateTokenMock
-      .mockReturnValueOnce("inbox-token")
-      .mockReturnValueOnce("new-session-token");
+    generateTokenMock.mockReturnValueOnce("new-session-token");
     generateAddressMock.mockReturnValue({
       localPart: "generated",
       address: "generated@inbound.example.test",
@@ -261,7 +253,7 @@ describe("extendInboxTime", () => {
     const newExpiresAt = new Date("2026-09-27T21:42:00.000Z");
     vi.useFakeTimers();
     vi.setSystemTime(now);
-    prismaMock.inbox.findUnique.mockResolvedValue({
+    prismaMock.inbox.findFirst.mockResolvedValue({
       id: "inbox-123",
       sessionId: "session-123",
       expiresAt: oldExpiresAt,
@@ -276,13 +268,16 @@ describe("extendInboxTime", () => {
       extendCount: 1,
     });
 
-    const req = { token: "inbox-token" };
+    const req = {
+      query: { inboxId: "inbox-123" },
+      session: { id: "session-123" },
+    };
     const res = createResponse();
 
     await extendInboxTime(req, res);
 
-    expect(prismaMock.inbox.findUnique).toHaveBeenCalledWith({
-      where: { tokenHash: "inbox-token-hash" },
+    expect(prismaMock.inbox.findFirst).toHaveBeenCalledWith({
+      where: { id: "inbox-123", sessionId: "session-123" },
       include: {
         session: {
           select: {
@@ -299,7 +294,7 @@ describe("extendInboxTime", () => {
       },
     });
     expect(prismaMock.inbox.update).toHaveBeenCalledWith({
-      where: { tokenHash: "inbox-token-hash" },
+      where: { id: "inbox-123" },
       data: {
         expiresAt: newExpiresAt,
         lastExtendedAt: now,

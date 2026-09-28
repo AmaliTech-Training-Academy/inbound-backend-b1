@@ -111,7 +111,7 @@ export const getSessionInboxes = asyncHandler(async (req, res) => {
       message: "Session Inboxes Fetched Success",
         data: {
             inboxes: session.inboxes.map((inbox) => ({
-           
+              id: inbox.id,
                 address: inbox.address,
                 localPart: inbox.localPart,
                 domain: inbox.domain,

@@ -5,23 +5,23 @@ import {
   fetchInboxMessages,
   fetchAllUnreadMessages
 } from "../controllers/messageController.js";
-import { requireInboxAccess } from "../../../middlewares/requireInboxAccess.js";
+import { requireSessionAccess } from "../../../middlewares/requireSessionAccess.js";
 import { globalRateLimit } from "../../../utils/rateLimit.js";
 const router = express.Router();
 
 router.use(globalRateLimit);
-router.get("/", requireInboxAccess, fetchInboxMessages);
-router.get("/:id/read", requireInboxAccess, readMessage);
+router.get("/", requireSessionAccess, fetchInboxMessages);
+router.get("/:id/read", requireSessionAccess, readMessage);
 
 router.get(
     "/:id",
-    requireInboxAccess,
+    requireSessionAccess,
     fetchMessage
 );
 
 router.get(
     '/unread/all',
-    requireInboxAccess,
+    requireSessionAccess,
     fetchAllUnreadMessages
 );
 

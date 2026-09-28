@@ -134,7 +134,6 @@ exports.Prisma.InboxScalarFieldEnum = {
   address: 'address',
   localPart: 'localPart',
   domain: 'domain',
-  tokenHash: 'tokenHash',
   createdAt: 'createdAt',
   expiresAt: 'expiresAt',
   lastExtendedAt: 'lastExtendedAt',

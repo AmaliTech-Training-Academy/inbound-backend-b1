@@ -2469,7 +2469,6 @@ export namespace Prisma {
     address: string | null
     localPart: string | null
     domain: string | null
-    tokenHash: string | null
     createdAt: Date | null
     expiresAt: Date | null
     lastExtendedAt: Date | null
@@ -2484,7 +2483,6 @@ export namespace Prisma {
     address: string | null
     localPart: string | null
     domain: string | null
-    tokenHash: string | null
     createdAt: Date | null
     expiresAt: Date | null
     lastExtendedAt: Date | null
@@ -2499,7 +2497,6 @@ export namespace Prisma {
     address: number
     localPart: number
     domain: number
-    tokenHash: number
     createdAt: number
     expiresAt: number
     lastExtendedAt: number
@@ -2524,7 +2521,6 @@ export namespace Prisma {
     address?: true
     localPart?: true
     domain?: true
-    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
@@ -2539,7 +2535,6 @@ export namespace Prisma {
     address?: true
     localPart?: true
     domain?: true
-    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
@@ -2554,7 +2549,6 @@ export namespace Prisma {
     address?: true
     localPart?: true
     domain?: true
-    tokenHash?: true
     createdAt?: true
     expiresAt?: true
     lastExtendedAt?: true
@@ -2656,7 +2650,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt: Date
     expiresAt: Date
     lastExtendedAt: Date | null
@@ -2690,7 +2683,6 @@ export namespace Prisma {
     address?: boolean
     localPart?: boolean
     domain?: boolean
-    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
@@ -2708,7 +2700,6 @@ export namespace Prisma {
     address?: boolean
     localPart?: boolean
     domain?: boolean
-    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
@@ -2724,7 +2715,6 @@ export namespace Prisma {
     address?: boolean
     localPart?: boolean
     domain?: boolean
-    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
@@ -2740,7 +2730,6 @@ export namespace Prisma {
     address?: boolean
     localPart?: boolean
     domain?: boolean
-    tokenHash?: boolean
     createdAt?: boolean
     expiresAt?: boolean
     lastExtendedAt?: boolean
@@ -2749,7 +2738,7 @@ export namespace Prisma {
     deletedAt?: boolean
   }
 
-  export type InboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sessionId" | "address" | "localPart" | "domain" | "tokenHash" | "createdAt" | "expiresAt" | "lastExtendedAt" | "extendCount" | "isDeleted" | "deletedAt", ExtArgs["result"]["inbox"]>
+  export type InboxOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sessionId" | "address" | "localPart" | "domain" | "createdAt" | "expiresAt" | "lastExtendedAt" | "extendCount" | "isDeleted" | "deletedAt", ExtArgs["result"]["inbox"]>
   export type InboxInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     session?: boolean | SessionDefaultArgs<ExtArgs>
     messages?: boolean | Inbox$messagesArgs<ExtArgs>
@@ -2774,7 +2763,6 @@ export namespace Prisma {
       address: string
       localPart: string
       domain: string
-      tokenHash: string
       createdAt: Date
       expiresAt: Date
       lastExtendedAt: Date | null
@@ -3211,7 +3199,6 @@ export namespace Prisma {
     readonly address: FieldRef<"Inbox", 'String'>
     readonly localPart: FieldRef<"Inbox", 'String'>
     readonly domain: FieldRef<"Inbox", 'String'>
-    readonly tokenHash: FieldRef<"Inbox", 'String'>
     readonly createdAt: FieldRef<"Inbox", 'DateTime'>
     readonly expiresAt: FieldRef<"Inbox", 'DateTime'>
     readonly lastExtendedAt: FieldRef<"Inbox", 'DateTime'>
@@ -7205,7 +7192,6 @@ export namespace Prisma {
     address: 'address',
     localPart: 'localPart',
     domain: 'domain',
-    tokenHash: 'tokenHash',
     createdAt: 'createdAt',
     expiresAt: 'expiresAt',
     lastExtendedAt: 'lastExtendedAt',
@@ -7442,7 +7428,6 @@ export namespace Prisma {
     address?: StringFilter<"Inbox"> | string
     localPart?: StringFilter<"Inbox"> | string
     domain?: StringFilter<"Inbox"> | string
-    tokenHash?: StringFilter<"Inbox"> | string
     createdAt?: DateTimeFilter<"Inbox"> | Date | string
     expiresAt?: DateTimeFilter<"Inbox"> | Date | string
     lastExtendedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
@@ -7459,7 +7444,6 @@ export namespace Prisma {
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
-    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrderInput | SortOrder
@@ -7473,7 +7457,6 @@ export namespace Prisma {
   export type InboxWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     address?: string
-    tokenHash?: string
     AND?: InboxWhereInput | InboxWhereInput[]
     OR?: InboxWhereInput[]
     NOT?: InboxWhereInput | InboxWhereInput[]
@@ -7488,7 +7471,7 @@ export namespace Prisma {
     deletedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
     session?: XOR<SessionScalarRelationFilter, SessionWhereInput>
     messages?: MessageListRelationFilter
-  }, "id" | "address" | "tokenHash">
+  }, "id" | "address">
 
   export type InboxOrderByWithAggregationInput = {
     id?: SortOrder
@@ -7496,7 +7479,6 @@ export namespace Prisma {
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
-    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrderInput | SortOrder
@@ -7519,7 +7501,6 @@ export namespace Prisma {
     address?: StringWithAggregatesFilter<"Inbox"> | string
     localPart?: StringWithAggregatesFilter<"Inbox"> | string
     domain?: StringWithAggregatesFilter<"Inbox"> | string
-    tokenHash?: StringWithAggregatesFilter<"Inbox"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Inbox"> | Date | string
     expiresAt?: DateTimeWithAggregatesFilter<"Inbox"> | Date | string
     lastExtendedAt?: DateTimeNullableWithAggregatesFilter<"Inbox"> | Date | string | null
@@ -7859,7 +7840,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -7876,7 +7856,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -7891,7 +7870,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7908,7 +7886,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7924,7 +7901,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -7938,7 +7914,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7953,7 +7928,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -8424,7 +8398,6 @@ export namespace Prisma {
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
-    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrder
@@ -8443,7 +8416,6 @@ export namespace Prisma {
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
-    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrder
@@ -8458,7 +8430,6 @@ export namespace Prisma {
     address?: SortOrder
     localPart?: SortOrder
     domain?: SortOrder
-    tokenHash?: SortOrder
     createdAt?: SortOrder
     expiresAt?: SortOrder
     lastExtendedAt?: SortOrder
@@ -9231,7 +9202,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -9246,7 +9216,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -9291,7 +9260,6 @@ export namespace Prisma {
     address?: StringFilter<"Inbox"> | string
     localPart?: StringFilter<"Inbox"> | string
     domain?: StringFilter<"Inbox"> | string
-    tokenHash?: StringFilter<"Inbox"> | string
     createdAt?: DateTimeFilter<"Inbox"> | Date | string
     expiresAt?: DateTimeFilter<"Inbox"> | Date | string
     lastExtendedAt?: DateTimeNullableFilter<"Inbox"> | Date | string | null
@@ -9445,7 +9413,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -9461,7 +9428,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -9523,7 +9489,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9539,7 +9504,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9684,7 +9648,6 @@ export namespace Prisma {
     address: string
     localPart: string
     domain: string
-    tokenHash: string
     createdAt?: Date | string
     expiresAt: Date | string
     lastExtendedAt?: Date | string | null
@@ -9698,7 +9661,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9713,7 +9675,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9728,7 +9689,6 @@ export namespace Prisma {
     address?: StringFieldUpdateOperationsInput | string
     localPart?: StringFieldUpdateOperationsInput | string
     domain?: StringFieldUpdateOperationsInput | string
-    tokenHash?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     lastExtendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

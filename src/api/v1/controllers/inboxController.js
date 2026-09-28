@@ -8,8 +8,6 @@ import prisma from "../../../configs/prisma.js";
 export const createInbox = asyncHandler(async (req, res) => {
   try {
     //token-hash generation
-    const inboxToken = generateToken();
-    const tokenHash = hashToken(inboxToken);
     const MAX_ATTEMPTS = 5;
     const expiresAt = new Date(Date.now() + INBOX_TTL_MINUTES * 60 * 1000);
 
@@ -51,7 +49,6 @@ export const createInbox = asyncHandler(async (req, res) => {
           localPart,
           domain: MAIL_DOMAIN,
           expiresAt,
-          tokenHash,
           session: reuseSession
             ? { connect: { id: session.id } }
             : {
@@ -81,9 +78,8 @@ export const createInbox = asyncHandler(async (req, res) => {
               token: sessionToken,
               expiresAt: sessionExpiresAt,
             },
-            address: inbox.address,
-            token: inboxToken,
-
+            id: inbox.id,
+            address: inbox.address,  
             expiresAt: inbox.expiresAt,
           },
         });
@@ -109,12 +105,19 @@ export const createInbox = asyncHandler(async (req, res) => {
 
 export const getInboxInfo = asyncHandler(async (req, res) => {
   try {
-    const token = req.token;
+    const inboxId = req.params.id;
 
-    const decodedToken = hashToken(token);
-    const inbox = await prisma.inbox.findUnique({
+    if (!inboxId) {
+      return res.status(400).json({
+        success: false,
+        message: "Inbox ID is required",
+      });
+    }
+
+    const inbox = await prisma.inbox.findFirst({
       where: {
-        tokenHash: decodedToken,
+        id: inboxId,
+        sessionId: req.session.id,
       },
       include: {
         messages: true,
@@ -168,9 +171,16 @@ export const getInboxInfo = asyncHandler(async (req, res) => {
 
 export const extendInboxTime = asyncHandler(async (req, res) => {
   try {
-    const tokenHash = hashToken(req.token);
-    const inbox = await prisma.inbox.findUnique({
-      where: { tokenHash },
+    const inboxId = req.params.id;
+    if (!inboxId) {
+      return res.status(400).json({
+        success: false,
+        message: "Inbox ID is required",
+      });
+    }
+
+    const inbox = await prisma.inbox.findFirst({
+      where: { id: inboxId, sessionId: req.session.id },
       include: {
         session: {
           select: {
@@ -206,7 +216,7 @@ export const extendInboxTime = asyncHandler(async (req, res) => {
 
     const updatedInbox = await prisma.$transaction(async (transaction) => {
       const updatedInboxRecord = await transaction.inbox.update({
-        where: { tokenHash },
+        where: { id: inboxId },
         data: {
           expiresAt,
           lastExtendedAt: now,

@@ -31,8 +31,6 @@ model Inbox {
   localPart String
   domain    String
 
-  tokenHash String @unique
-
   createdAt      DateTime  @default(now())
   expiresAt      DateTime
   lastExtendedAt DateTime?
