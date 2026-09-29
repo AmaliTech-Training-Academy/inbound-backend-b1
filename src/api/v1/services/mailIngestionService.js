@@ -19,7 +19,8 @@ function getName(value) {
 }
 
 export async function ingestMailgunMessage({body, prisma, signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY}){
-    const hasRawMime = typeof body?.["body-mime"] === "string" && body["body-mime"].length > 0;
+    const bodyMime = body?.["body-mime"];
+    const hasRawMime = Buffer.isBuffer(bodyMime) || (typeof bodyMime === "string" && bodyMime.length > 0);
     const hasParsedBody = typeof body?.["body-plain"] === "string" || typeof body?.["body-html"] === "string";
 
     if (!body?.recipient || (!hasRawMime && !hasParsedBody) || !/^\d+$/.test(String(body.timestamp)) || !body.token || !/^[a-f\d]{64}$/i.test(body.signature || "")) {
@@ -53,7 +54,11 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
 
     }
     //check size
-    const rawEmail = hasRawMime ? Buffer.from(body["body-mime"], "utf8") : null;
+    const rawEmail = Buffer.isBuffer(bodyMime)
+        ? bodyMime
+        : hasRawMime
+            ? Buffer.from(bodyMime, "utf8")
+            : null;
     if (rawEmail && rawEmail.length > MAX_MESSAGE_BYTES) {
         throw new PermanentIngestionError("Message exceeds size limit.")
     }
