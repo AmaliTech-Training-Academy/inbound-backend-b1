@@ -166,9 +166,36 @@ Clients join an isolated room scoped to a specific inbox by providing the inbox 
     - \`"address and token are required"\`: Missing or empty \`address\` or \`token\` fields.
     - \`"invalid or expired inbox credentials"\`: The address does not exist, token does not match, or the inbox has expired.
     - \`"unable to validate inbox credentials"\`: Database or server error during validation.
-  - **Room Isolation:** Clients are automatically removed from any prior \`inbox:*\` rooms before joining a new room.
+  - **Multi-Inbox Subscription:** Clients can subscribe to multiple inboxes simultaneously on the same socket connection to receive live updates across all active session addresses.
 
-### 3. Real-Time Message Push: \`message:new\`
+### 3. Explicit Unsubscription: \`leave-inbox\`
+Clients can unsubscribe from a specific inbox room without terminating the WebSocket connection.
+
+- **Event:** \`leave-inbox\`
+- **Direction:** Client to Server
+- **Payload Schema:** [SocketLeaveInboxPayload](#/components/schemas/SocketLeaveInboxPayload)
+\`\`\`json
+{
+  "inboxId": "c56a4180-65aa-42ec-a945-5fd21dec0538"
+}
+\`\`\`
+- **Acknowledgement Callback:**
+  - **Success Response:** [SocketLeaveInboxSuccessResponse](#/components/schemas/SocketLeaveInboxSuccessResponse)
+    \`\`\`json
+    {
+      "success": true,
+      "room": "inbox:c56a4180-65aa-42ec-a945-5fd21dec0538"
+    }
+    \`\`\`
+  - **Failure Response:** [SocketLeaveInboxErrorResponse](#/components/schemas/SocketLeaveInboxErrorResponse)
+    \`\`\`json
+    {
+      "success": false,
+      "error": "inboxId is required"
+    }
+    \`\`\`
+
+### 4. Real-Time Message Push: \`message:new\`
 When a new message arrives for a subscribed inbox, the server broadcasts an event to that inbox's room.
 
 - **Event:** \`message:new\`
@@ -178,6 +205,8 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
 \`\`\`json
 {
   "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "inboxId": "c56a4180-65aa-42ec-a945-5fd21dec0538",
+  "toAddress": "user-abc123@domain.com",
   "fromAddress": "sender@example.com",
   "subject": "Verification code",
   "receivedAt": "2026-09-17T09:00:00.000Z"
@@ -1816,15 +1845,74 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
         },
       },
+      SocketLeaveInboxPayload: {
+        type: "object",
+        required: ["inboxId"],
+        properties: {
+          inboxId: {
+            type: "string",
+            format: "uuid",
+            description: "Unique inbox UUID to unsubscribe from.",
+            example: "c56a4180-65aa-42ec-a945-5fd21dec0538",
+          },
+        },
+      },
+      SocketLeaveInboxSuccessResponse: {
+        type: "object",
+        required: ["success", "room"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          room: {
+            type: "string",
+            example: "inbox:c56a4180-65aa-42ec-a945-5fd21dec0538",
+          },
+        },
+      },
+      SocketLeaveInboxErrorResponse: {
+        type: "object",
+        required: ["success", "error"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: false,
+          },
+          error: {
+            type: "string",
+            example: "inboxId is required",
+          },
+        },
+      },
       SocketMessageNewEvent: {
         type: "object",
-        required: ["id", "fromAddress", "subject", "receivedAt"],
+        required: [
+          "id",
+          "inboxId",
+          "toAddress",
+          "fromAddress",
+          "subject",
+          "receivedAt",
+        ],
         properties: {
           id: {
             type: "string",
             format: "uuid",
             description: "Unique message UUID.",
             example: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          },
+          inboxId: {
+            type: "string",
+            format: "uuid",
+            description: "Unique inbox UUID that received the email.",
+            example: "c56a4180-65aa-42ec-a945-5fd21dec0538",
+          },
+          toAddress: {
+            type: "string",
+            format: "email",
+            description: "Recipient email address.",
+            example: "user-abc123@domain.com",
           },
           fromAddress: {
             type: "string",
@@ -1865,6 +1953,21 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           error: {
             $ref: "#/components/schemas/SocketJoinInboxErrorResponse",
+          },
+        },
+      },
+      "leave-inbox": {
+        direction: "client-to-server",
+        description: "Unsubscribes the client socket from an inbox room.",
+        payload: {
+          $ref: "#/components/schemas/SocketLeaveInboxPayload",
+        },
+        acknowledgement: {
+          success: {
+            $ref: "#/components/schemas/SocketLeaveInboxSuccessResponse",
+          },
+          error: {
+            $ref: "#/components/schemas/SocketLeaveInboxErrorResponse",
           },
         },
       },
