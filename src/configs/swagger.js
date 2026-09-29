@@ -44,6 +44,73 @@ const bearerErrors = {
   },
 };
 
+const sessionBearerErrors = {
+  401: {
+    description: "Missing or invalid session bearer token",
+    content: {
+      "application/json": {
+        schema: {
+          $ref: "#/components/schemas/ErrorResponse",
+        },
+        examples: {
+          missingToken: {
+            value: {
+              success: false,
+              message: "Authorization token is required",
+            },
+          },
+          invalidFormat: {
+            value: {
+              success: false,
+              message: "Invalid authorization format",
+            },
+          },
+          sessionNotFound: {
+            value: {
+              success: false,
+              message: "Session Not Found",
+            },
+          },
+          missingSessionToken: {
+            value: {
+              success: false,
+              message: "Session token is required",
+            },
+          },
+        },
+      },
+    },
+  },
+  410: {
+    description: "Session has expired",
+    content: {
+      "application/json": {
+        schema: {
+          $ref: "#/components/schemas/ErrorResponse",
+        },
+        example: {
+          success: false,
+          message: "Session Expired",
+        },
+      },
+    },
+  },
+  404: {
+    description: "Session no longer exists",
+    content: {
+      "application/json": {
+        schema: {
+          $ref: "#/components/schemas/ErrorResponse",
+        },
+        example: {
+          success: false,
+          message: "Session Not Found",
+        },
+      },
+    },
+  },
+};
+
 const swaggerDefinition = {
   openapi: "3.0.3",
   info: {
@@ -134,6 +201,10 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       description: "Temporary inbox creation and lifecycle operations.",
     },
     {
+      name: "Session",
+      description: "Session metadata and inboxes associated with a session.",
+    },
+    {
       name: "Messages",
       description: "Authenticated message retrieval and read state operations.",
     },
@@ -205,7 +276,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "Create a temporary inbox",
         operationId: "createInbox",
         description:
-          "Generates a random email address, creates an inbox, and returns a raw access token. The token is stored only as a SHA-256 hash and is returned only at creation time.",
+          "Generates an inbox and its parent session, returning raw inbox and session tokens. Both tokens are stored only as SHA-256 hashes and returned only at creation time. Use the inbox token for inbox and message routes, and the session token for session routes.",
         responses: {
           201: {
             description: "Inbox created",
@@ -217,6 +288,10 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 example: {
                   success: true,
                   data: {
+                    session: {
+                      token: "raw-session-token-returned-once",
+                      expiresAt: "2026-09-16T14:00:00.000Z",
+                    },
                     id: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
                     address: "generated-address@example.com",
                     token: "raw-token-returned-once",
@@ -226,6 +301,80 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               },
             },
           },
+          500: errorResponse,
+        },
+      },
+    },
+    "/api/v1/session": {
+      get: {
+        tags: ["Session"],
+        summary: "Fetch authenticated session information",
+        operationId: "getSessionInfo",
+        description:
+          "Returns session expiration metadata and the number of inboxes associated with the bearer session token.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Session information",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/SessionInfoResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Session Info Fetched Success",
+                  data: {
+                    createdAt: "2026-09-16T13:00:00.000Z",
+                    expiresAt: "2026-09-16T14:00:00.000Z",
+                    lastExtendedAt: null,
+                    inboxCount: 1,
+                  },
+                },
+              },
+            },
+          },
+          ...sessionBearerErrors,
+          500: errorResponse,
+        },
+      },
+    },
+    "/api/v1/session/inboxes": {
+      get: {
+        tags: ["Session"],
+        summary: "List inboxes for the authenticated session",
+        operationId: "getSessionInboxes",
+        description:
+          "Returns the email address and lifecycle metadata for each inbox owned by the bearer session, including each inbox's message count.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Session inboxes",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/SessionInboxesResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Session Inboxes Fetched Success",
+                  data: {
+                    inboxes: [
+                      {
+                        address: "generated-address@example.com",
+                        localPart: "generated-address",
+                        domain: "example.com",
+                        createdAt: "2026-09-16T13:00:00.000Z",
+                        expiresAt: "2026-09-16T14:00:00.000Z",
+                        messageCount: 3,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          ...sessionBearerErrors,
           500: errorResponse,
         },
       },
@@ -340,6 +489,86 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                       message: "Inbox has been deleted",
                     },
                   },
+                },
+              },
+            },
+          },
+          500: errorResponse,
+        },
+      },
+    },
+    "/api/v1/inbox/messages": {
+      get: {
+        tags: ["Messages"],
+        summary: "Fetch all messages from the authenticated inbox",
+        operationId: "getInboxMessages",
+        description:
+          "Returns every message belonging to the current inbox, ordered newest-first. Each item includes the public message metadata and attachment count.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Inbox messages list",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InboxMessagesResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Inbox messages fetched successfully",
+                  data: {
+                    messages: [
+                      {
+                        id: "message-uuid",
+                        subject: "Verification code",
+                        fromName: "Example Sender",
+                        fromAddress: "sender@example.com",
+                        toAddress: "generated-address@example.com",
+                        isRead: false,
+                        status: "PARSED",
+                        receivedAt: "2026-09-16T13:10:00.000Z",
+                        expiresAt: "2026-09-16T14:00:00.000Z",
+                        attachmentCount: 1,
+                      },
+                      {
+                        id: "message-uuid-2",
+                        subject: "Password reset",
+                        fromName: "Support",
+                        fromAddress: "support@example.com",
+                        toAddress: "generated-address@example.com",
+                        isRead: true,
+                        status: "PARSED",
+                        receivedAt: "2026-09-16T12:45:00.000Z",
+                        expiresAt: "2026-09-16T13:45:00.000Z",
+                        attachmentCount: 0,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing or invalid token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox Not Found",
                 },
               },
             },
@@ -490,6 +719,76 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/messages/unread/all": {
+      get: {
+        tags: ["Messages"],
+        summary: "Fetch all unread messages for the authenticated inbox",
+        operationId: "getUnreadMessages",
+        description:
+          "Returns the unread messages for the current inbox, ordered by receivedAt descending. The controller returns only the public fields needed for the inbox UI.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Unread messages list",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/UnreadMessagesResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Unread messages fetched successfully",
+                  data: [
+                    {
+                      id: "message-uuid",
+                      subject: "Verification code",
+                      sender: "Example Sender <sender@example.com>",
+                      to: "generated-address@example.com",
+                      receivedAt: "2026-09-16T13:10:00.000Z",
+                      isRead: false,
+                    },
+                    {
+                      id: "message-uuid-2",
+                      subject: "Password reset",
+                      sender: "Support <support@example.com>",
+                      to: "generated-address@example.com",
+                      receivedAt: "2026-09-16T12:45:00.000Z",
+                      isRead: false,
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing or invalid token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox Not Found",
+                },
+              },
+            },
+          },
+          500: errorResponse,
+        },
+      },
+    },
     "/api/v1/webhooks/mailgun/raw-mime": {
       post: {
         tags: ["Mailgun"],
@@ -631,7 +930,8 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         type: "http",
         scheme: "bearer",
         bearerFormat: "token",
-        description: "The raw token returned by POST /api/v1/inbox.",
+        description:
+          "Use the raw inbox token or session token returned by POST /api/v1/inbox, depending on the endpoint.",
       },
     },
     parameters: {
@@ -718,8 +1018,24 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       CreatedInbox: {
         type: "object",
-        required: ["id", "address", "token", "expiresAt"],
+        required: ["session", "id", "address", "token", "expiresAt"],
         properties: {
+          session: {
+            type: "object",
+            required: ["token", "expiresAt"],
+            properties: {
+              token: {
+                type: "string",
+                description:
+                  "Raw bearer token for session endpoints. Returned only when the inbox is created.",
+                example: "raw-session-token-returned-once",
+              },
+              expiresAt: {
+                type: "string",
+                format: "date-time",
+              },
+            },
+          },
           id: {
             type: "string",
             format: "uuid",
@@ -737,6 +1053,97 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           expiresAt: {
             type: "string",
             format: "date-time",
+          },
+        },
+      },
+      SessionInfoResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Session Info Fetched Success",
+          },
+          data: {
+            type: "object",
+            required: ["createdAt", "expiresAt", "lastExtendedAt", "inboxCount"],
+            properties: {
+              createdAt: {
+                type: "string",
+                format: "date-time",
+              },
+              expiresAt: {
+                type: "string",
+                format: "date-time",
+              },
+              lastExtendedAt: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+              },
+              inboxCount: {
+                type: "integer",
+                minimum: 0,
+              },
+            },
+          },
+        },
+      },
+      SessionInboxesResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Session Inboxes Fetched Success",
+          },
+          data: {
+            type: "object",
+            required: ["inboxes"],
+            properties: {
+              inboxes: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/SessionInboxSummary",
+                },
+              },
+            },
+          },
+        },
+      },
+      SessionInboxSummary: {
+        type: "object",
+        required: ["address", "localPart", "domain", "createdAt", "expiresAt", "messageCount"],
+        properties: {
+          address: {
+            type: "string",
+            format: "email",
+          },
+          localPart: {
+            type: "string",
+          },
+          domain: {
+            type: "string",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          messageCount: {
+            type: "integer",
+            minimum: 0,
           },
         },
       },
@@ -998,6 +1405,126 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           message: {
             type: "string",
             example: "Message marked as read",
+          },
+        },
+      },
+      InboxMessagesResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Inbox messages fetched successfully",
+          },
+          data: {
+            type: "object",
+            required: ["messages"],
+            properties: {
+              messages: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/InboxMessageSummary",
+                },
+              },
+            },
+          },
+        },
+      },
+      InboxMessageSummary: {
+        type: "object",
+        required: ["id", "subject", "fromName", "fromAddress", "toAddress", "isRead", "status", "receivedAt", "expiresAt", "attachmentCount"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          fromName: {
+            type: "string",
+            nullable: true,
+          },
+          fromAddress: {
+            type: "string",
+            format: "email",
+          },
+          toAddress: {
+            type: "string",
+            format: "email",
+          },
+          isRead: {
+            type: "boolean",
+          },
+          status: {
+            type: "string",
+            enum: ["PENDING", "PARSED", "FAILED"],
+          },
+          receivedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+          },
+          attachmentCount: {
+            type: "integer",
+            minimum: 0,
+          },
+        },
+      },
+      UnreadMessagesResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Unread messages fetched successfully",
+          },
+          data: {
+            type: "array",
+            items: {
+              $ref: "#/components/schemas/UnreadMessage",
+            },
+          },
+        },
+      },
+      UnreadMessage: {
+        type: "object",
+        required: ["id", "subject", "sender", "to", "receivedAt", "isRead"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          subject: {
+            type: "string",
+            nullable: true,
+          },
+          sender: {
+            type: "string",
+            description: "Formatted sender value using fromName and fromAddress when present.",
+          },
+          to: {
+            type: "string",
+            format: "email",
+          },
+          receivedAt: {
+            type: "string",
+            format: "date-time",
+          },
+          isRead: {
+            type: "boolean",
           },
         },
       },

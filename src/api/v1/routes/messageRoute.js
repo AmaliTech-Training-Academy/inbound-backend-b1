@@ -1,23 +1,28 @@
-import express from  'express'
-import { readMessage,fetchMessage } from '../controllers/messageController.js';
-import { requireInboxAccess } from '../../../middlewares/requireInboxAccess.js';
-import { globalRateLimit } from '../../../utils/rateLimit.js';
+import express from "express";
+import {
+  readMessage,
+  fetchMessage,
+  fetchInboxMessages,
+  fetchAllUnreadMessages
+} from "../controllers/messageController.js";
+import { requireSessionAccess } from "../../../middlewares/requireSessionAccess.js";
+import { globalRateLimit } from "../../../utils/rateLimit.js";
 const router = express.Router();
 
 router.use(globalRateLimit);
-
-router.get(
-    '/:id/read',
-    requireInboxAccess,
-    readMessage
-);
-
+router.get("/", requireSessionAccess, fetchInboxMessages);
+router.get("/:id/read", requireSessionAccess, readMessage);
 
 router.get(
     "/:id",
-    requireInboxAccess,
+    requireSessionAccess,
     fetchMessage
 );
 
-export { router as messageRouter };
+router.get(
+    '/unread/all',
+    requireSessionAccess,
+    fetchAllUnreadMessages
+);
 
+export { router as messageRouter };

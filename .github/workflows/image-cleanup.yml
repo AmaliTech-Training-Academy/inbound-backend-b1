@@ -4,15 +4,11 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows: ["Inbound-Server-deployment-Pipeline"]
-    types:
-      - completed
-    branches:
-    #   - main
-      - dev
+    types: [completed]
 
 jobs:
   cleanup:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +19,24 @@ jobs:
             username: ${{ secrets.EC2_USER }}
             key: ${{ secrets.EC2_KEY }}
             script: |
-              CURRENT_IMAGE=$(docker inspect $(docker compose -f /opt/inbound-backend-b1/docker-compose.yml ps -q my_service) --format '{{.Image}}')
+              set -eu
+              cd /opt/inbound-backend-b1
+
+              CURRENT_IMAGE=$(docker compose images -q my_service | head -n 1)
+
+              if [ -z "$CURRENT_IMAGE" ]; then
+                echo "Could not determine the current my_service image; skipping cleanup."
+                exit 0
+              fi
+
+              CURRENT_IMAGE_ID=$(docker image inspect "$CURRENT_IMAGE" --format '{{.Id}}')
 
               docker images inbound-api --format '{{.ID}} {{.CreatedAt}}' \
                 | sort -k2,3,4,5 -r \
                 | awk '{print $1}' \
-                | tail -n +2 \
                 | while read IMAGE_ID; do
-                    if [ "$IMAGE_ID" != "$CURRENT_IMAGE" ]; then
+                    IMAGE_ID_FULL=$(docker image inspect "$IMAGE_ID" --format '{{.Id}}')
+                    if [ "$IMAGE_ID_FULL" != "$CURRENT_IMAGE_ID" ]; then
                       echo "Removing old image: $IMAGE_ID"
                       docker rmi "$IMAGE_ID" || true
                     fi

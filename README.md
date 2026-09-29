@@ -127,7 +127,7 @@ The OpenAPI source is [`src/configs/swagger.js`](src/configs/swagger.js). The do
 | --- | --- | --- | --- |
 | `GET` | `/` | None | Return service information. |
 | `GET` | `/api/v1/health` | None | Confirm the HTTP process is responding. |
-| `POST` | `/api/v1/inbox` | None | Create a temporary inbox and return its raw bearer token. |
+| `POST` | `/api/v1/inbox` | Optional session bearer token | Create a temporary inbox, reusing a valid session when provided. |
 | `GET` | `/api/v1/inbox/info` | Bearer token | Retrieve authenticated inbox metadata. |
 | `PATCH` | `/api/v1/inbox/extend` | Bearer token | Add five minutes to inbox expiration. |
 | `GET` | `/api/v1/inbox/messages/:id` | Bearer token | Retrieve one message belonging to the inbox. |
@@ -140,6 +140,8 @@ The OpenAPI source is [`src/configs/swagger.js`](src/configs/swagger.js). The do
 ```bash
 curl -X POST http://localhost:9001/api/v1/inbox
 ```
+
+To add the inbox to an existing session, pass its session token as a bearer token. An expired or invalid session is replaced with a new session.
 
 Response `201`:
 
@@ -355,7 +357,6 @@ Socket.IO runs on the same origin as the HTTP server. The current WebSocket impl
 
 - The current attachment API returns metadata and an internal `objectKey`; it does not expose a file-download endpoint.
 - Attachment bytes are not uploaded to object storage by the current ingestion service.
-- There is no pagination endpoint for messages.
 - There is no inbox deletion endpoint or background cleanup worker.
 - The parsed Mailgun acknowledgement endpoint validates the webhook but does not persist a message.
 - The health endpoint checks HTTP responsiveness only; it does not verify database or Mailgun readiness.

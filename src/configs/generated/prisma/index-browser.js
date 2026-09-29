@@ -120,8 +120,17 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.SessionScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  createdAt: 'createdAt',
+  lastExtendedAt: 'lastExtendedAt',
+  expiresAt: 'expiresAt'
+};
+
 exports.Prisma.InboxScalarFieldEnum = {
   id: 'id',
+  sessionId: 'sessionId',
   address: 'address',
   localPart: 'localPart',
   domain: 'domain',
@@ -130,8 +139,7 @@ exports.Prisma.InboxScalarFieldEnum = {
   lastExtendedAt: 'lastExtendedAt',
   extendCount: 'extendCount',
   isDeleted: 'isDeleted',
-  deletedAt: 'deletedAt',
-  tokenHash: 'tokenHash'
+  deletedAt: 'deletedAt'
 };
 
 exports.Prisma.MessageScalarFieldEnum = {
@@ -198,6 +206,7 @@ exports.MessageStatus = exports.$Enums.MessageStatus = {
 };
 
 exports.Prisma.ModelName = {
+  Session: 'Session',
   Inbox: 'Inbox',
   Message: 'Message',
   Attachment: 'Attachment',

@@ -1,6 +1,6 @@
 import express from 'express'
 import { createInbox, getInboxInfo, extendInboxTime } from '../controllers/inboxController.js';
-import { requireInboxAccess } from '../../../middlewares/requireInboxAccess.js';
+import { requireSessionAccess } from '../../../middlewares/requireSessionAccess.js';
 import { messageRouter } from './messageRoute.js';
 import { globalRateLimit } from '../../../utils/rateLimit.js';
 
@@ -10,13 +10,13 @@ router.post('/',
     createInbox
 )
 
-router.get('/info',
-    requireInboxAccess,
+router.get('/:id',
+    requireSessionAccess,
     getInboxInfo
 )
 
-router.patch('/extend',
-    requireInboxAccess,
+router.patch('/extend/:id',
+    requireSessionAccess,
     extendInboxTime
 )
 
