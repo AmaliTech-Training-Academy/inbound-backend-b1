@@ -5,6 +5,8 @@ import { verifyInboxAccess } from '../lib/inboxAccess.js';
 export function publishNewMessage(io, inboxId, message) {
   io.to(`inbox:${inboxId}`).emit('message:new', {
     id: message.id,
+    inboxId: inboxId,
+    toAddress: message.toAddress,
     fromAddress: message.fromAddress,
     subject: message.subject,
     receivedAt: message.receivedAt
@@ -48,17 +50,27 @@ export const initWebSocket = (server, checkInboxAccess = verifyInboxAccess) => {
       }
 
       const room = `inbox:${inbox.id}`;
-      for (const existingRoom of socket.rooms) {
-        if (existingRoom.startsWith('inbox:')) {
-          socket.leave(existingRoom);
-        }
-      }
       socket.join(room);
-      console.log(`Client ${socket.id} joined inbox: ${normalizedAddress}`);
+      console.log(`Client ${socket.id} joined inbox: ${normalizedAddress} (${room})`);
       acknowledge?.({ success: true, room });
     });
 
-    // Socket.IO removes the client's rooms when it disconnects.
+    // Explicitly unsubscribe from an inbox room without terminating the socket
+    socket.on('leave-inbox', (payload = {}, acknowledge) => {
+      const { inboxId } = payload ?? {};
+
+      if (typeof inboxId !== 'string' || !inboxId.trim()) {
+        acknowledge?.({ success: false, error: 'inboxId is required' });
+        return;
+      }
+
+      const room = `inbox:${inboxId.trim()}`;
+      socket.leave(room);
+      console.log(`Client ${socket.id} left inbox room: ${room}`);
+      acknowledge?.({ success: true, room });
+    });
+
+    // Socket.IO removes all of the client's rooms when it disconnects.
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`);
     });

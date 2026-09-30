@@ -65,4 +65,37 @@ describe("requireInboxAccess", () => {
     expect(req.session).toEqual({ ...session, token: "session-token" });
     expect(next).toHaveBeenCalledOnce();
   });
+
+  it("selects the session id that controllers use to scope queries", async () => {
+    prismaMock.session.findUnique.mockResolvedValue({
+      id: "session-123",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
+    const req = { headers: { authorization: "Bearer session-token" } };
+
+    await requireInboxAccess(req, createResponse(), vi.fn());
+
+    expect(prismaMock.session.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tokenHash: "hashed-token" },
+        select: expect.objectContaining({ id: true }),
+      }),
+    );
+  });
+
+  it("fails closed when the session record has no id", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    prismaMock.session.findUnique.mockResolvedValue({
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
+    const req = { headers: { authorization: "Bearer session-token" } };
+    const res = createResponse();
+    const next = vi.fn();
+
+    await requireInboxAccess(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(req.session).toBeUndefined();
+    expect(next).not.toHaveBeenCalled();
+  });
 });

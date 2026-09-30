@@ -35,6 +35,7 @@ export const requireSessionAccess = async (req, res, next) => {
         tokenHash: sessionTokenHash,
       },
       select: {
+        id: true,
         inboxes: true,
         createdAt: true,
         expiresAt: true,
@@ -54,6 +55,13 @@ export const requireSessionAccess = async (req, res, next) => {
         success: false,
         message: "Session Expired",
       });
+    }
+
+    // Controllers scope every query with `sessionId: req.session.id`. Prisma
+    // drops filters whose value is undefined, so a missing id would expose
+    // every session's inboxes - fail closed instead.
+    if (!session.id) {
+      throw new Error("Session record is missing its id");
     }
 
     req.session = {
