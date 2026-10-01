@@ -1,25 +1,12 @@
 import { simpleParser } from "mailparser";
 import sanitizeHtml from "sanitize-html";
 
-/**
- * Denylist model: every tag and attribute an email contains is preserved by
- * default (allowedTags/allowedAttributes set to `false`), so unknown, custom,
- * namespaced (VML `v:*`, `o:*`) and future tags survive untouched.
- *
- * Only constructs that can execute code or hijack the viewer are removed:
- *   script/iframe/object/embed/applet - arbitrary JS or nested documents
- *   base                              - would silently rewrite every relative URL
- *   form/input/button/textarea/select - credential phishing rendered inside the inbox
- *   meta http-equiv=refresh           - forces navigation away from the app
- * plus `on*` event-handler attributes and `javascript:`/`vbscript:` URLs.
- */
+
 const BLOCKED_TAGS = new Set([
     "applet", "base", "button", "embed", "form", "frame", "frameset", "iframe",
     "input", "object", "script", "select", "textarea",
 ]);
 
-// `data:` is deliberately absent from links: it would allow navigation to a
-// data:text/html document. It stays available to images (see the per-tag map).
 const LINK_SCHEMES = ["http", "https", "mailto", "tel", "sms", "callto", "webcal"];
 
 const URL_SCHEMES = [
@@ -28,10 +15,6 @@ const URL_SCHEMES = [
 
 const DANGEROUS_STYLE = /(?:expression\s*\(|(?:javascript|vbscript|mocha|livescript)\s*:|-moz-binding)/gi;
 
-/**
- * Drop attribute-level script vectors. Applied to every element, including the
- * ones with their own transform.
- */
 function scrubAttributes(attribs) {
     for (const rawName of Object.keys(attribs)) {
         const name = rawName.toLowerCase();
@@ -41,7 +24,6 @@ function scrubAttributes(attribs) {
             continue;
         }
 
-        // sanitize-html does not inspect CSS payloads inside `style`, so do it here.
         if (name === "style" && typeof attribs[rawName] === "string") {
             attribs[rawName] = attribs[rawName].replace(DANGEROUS_STYLE, "/*blocked*/");
         }
@@ -53,8 +35,6 @@ export function sanitizeHtmlBody(html) {
     return sanitizeHtml(html || "", {
         allowedTags: false,
         allowedAttributes: false,
-        // Required for <style>; <script> is removed by the filter below, not by
-        // this flag.
         allowVulnerableTags: true,
         allowedSchemes: URL_SCHEMES,
         allowedSchemesByTag: { a: LINK_SCHEMES, area: LINK_SCHEMES },
@@ -63,9 +43,6 @@ export function sanitizeHtmlBody(html) {
             "longdesc", "poster", "src", "srcset", "xlink:href",
         ],
         allowProtocolRelative: true,
-        // Preserve SVG camelCase (viewBox, preserveAspectRatio, gradientUnits).
-        // Tag names stay lowercased so the denylist cannot be bypassed with
-        // <SCRIPT> / <ScRiPt>.
         parser: { lowerCaseAttributeNames: false },
         disallowedTagsMode: "discard",
         transformTags: {
@@ -81,7 +58,7 @@ export function sanitizeHtmlBody(html) {
         },
         exclusiveFilter: (frame) => {
             if (BLOCKED_TAGS.has(String(frame.tag).toLowerCase())) return true;
-            // <meta http-equiv="refresh">, whatever its casing.
+
             return frame.tag === "meta" && Object.entries(frame.attribs).some(
                 ([name, value]) =>
                     name.toLowerCase() === "http-equiv" &&
@@ -91,11 +68,6 @@ export function sanitizeHtmlBody(html) {
     });
 }
 
-/**
- * Mailgun/mailparser keep inline (embedded) images as `cid:` references, which a
- * browser cannot resolve. Swap them for the matching attachment inlined as a
- * `data:` URI so they render without a public attachment endpoint.
- */
 function inlineCidImages(html, attachments) {
     if (!html || !html.includes("cid:")) return html;
 
