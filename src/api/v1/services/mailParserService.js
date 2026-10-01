@@ -1,4 +1,4 @@
-import {simpleParser} from "mailparser";
+import { simpleParser } from "mailparser";
 import sanitizeHtml from "sanitize-html";
 
 /**
@@ -151,6 +151,5 @@ export async function parseInboundEmail(rawEmail){
             content: attachment.content,
             checksum: attachment.checksum || null
         })),
-
     };
 }
