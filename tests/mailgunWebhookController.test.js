@@ -108,13 +108,12 @@ describe("createMailgunWebhookController", () => {
 
 		await createMailgunWebhookController({ prisma })(req, res);
 
-		expect(ingestMock).toHaveBeenCalledWith({
-			body: {
-				recipient: "inbox@example.test",
-				"body-mime": "raw MIME",
-			},
+		const ingestionInput = ingestMock.mock.calls[0][0];
+		expect(ingestionInput).toMatchObject({
+			body: { recipient: "inbox@example.test" },
 			prisma,
 		});
+		expect(ingestionInput.body["body-mime"]).toBe(req.files[0].buffer);
 		expect(publishMock).toHaveBeenCalledWith(io, "inbox-1", message);
 		expect(res.status).toHaveBeenCalledWith(202);
 		expect(res.json).toHaveBeenCalledWith({
