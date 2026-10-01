@@ -44,16 +44,6 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
         throw new PermanentIngestionError("Invalid recipient address.");
     }
 
-    //check inbox
-    const  inbox = await prisma.inbox.findFirst({
-        where: {address: recipient, isDeleted: false, expiresAt:{gt: new Date()}},
-        select: {id:true, address:true, expiresAt: true},
-    })
-    if (!inbox){
-        throw new PermanentIngestionError("Inbox not found,unknown or expired")
-
-    }
-    //check size
     const rawEmail = Buffer.isBuffer(bodyMime)
         ? bodyMime
         : hasRawMime
@@ -63,16 +53,27 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
         throw new PermanentIngestionError("Message exceeds size limit.")
     }
 
-    const parsed = rawEmail
-        ? await parseInboundEmail(rawEmail)
-        : {
+    const inboxPromise = prisma.inbox.findFirst({
+        where: {address: recipient, isDeleted: false, expiresAt:{gt: new Date()}},
+        select: {id:true, address:true, expiresAt: true},
+    })
+
+    const parsedPromise = rawEmail
+        ? parseInboundEmail(rawEmail)
+        : Promise.resolve({
             fromAddress: getAddress(body.from || body.sender),
             fromName: getName(body.from),
             subject: body.subject || "No Subject",
             textBody: body["body-plain"] || "",
             htmlBody: sanitizeHtmlBody(body["body-html"] || ""),
             attachments: [],
-        };
+        });
+
+    const [inbox, parsed] = await Promise.all([inboxPromise, parsedPromise]);
+    if (!inbox){
+        throw new PermanentIngestionError("Inbox not found,unknown or expired")
+
+    }
     const attachmentBytes = parsed.attachments.reduce((total,item)=>total + item.sizeBytes,0)
 
     if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
