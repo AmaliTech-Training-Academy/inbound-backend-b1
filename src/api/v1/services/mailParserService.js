@@ -1,20 +1,17 @@
-import {simpleParser} from "mailparser";
+import { simpleParser } from "mailparser";
 import sanitizeHtml from "sanitize-html";
-
-const ALLOWED_TAGS = [
-    "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3",
-    "hr", "li", "ol", "p", "pre", "span", "strong", "table", "tbody",
-    "td", "th", "thead", "tr", "u", "ul",
-];
 
 export function sanitizeHtmlBody(html) {
     return sanitizeHtml(html || "", {
-        allowedTags: ALLOWED_TAGS,
-        allowedAttributes: {
-            a: ["href", "name", "target"],
-            "*": ["class"],
+        allowedTags: false,
+        allowedAttributes: false,
+        allowedStyles: {
+            '*': {
+                '.*': [/.*/]
+            }
         },
-        allowedSchemes: ["http", "https", "mailto"],
+        
+        allowedSchemes: ["http", "https", "mailto", "data"], // Added data for base64 inline images
         disallowedTagsMode: "discard",
         transformTags: {
             a: sanitizeHtml.simpleTransform("a", {
@@ -48,6 +45,5 @@ export async function parseInboundEmail(rawEmail){
             content: attachment.content,
             checksum: attachment.checksum || null
         })),
-
     };
-} 
+}
