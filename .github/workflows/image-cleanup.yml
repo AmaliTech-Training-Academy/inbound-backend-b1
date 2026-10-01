@@ -1,8 +1,7 @@
 name: Cleanup Docker Images
 
 on:
-  push:
-    branches: [dev]
+
     
   workflow_dispatch:
   workflow_run:
@@ -28,19 +27,20 @@ jobs:
               CURRENT_IMAGE=$(docker compose images -q my_service | head -n 1)
 
               if [ -z "$CURRENT_IMAGE" ]; then
-                echo "Could not determine the current my_service image; skipping cleanup."
-                exit 0
+                echo "Could not determine current image."
+                exit 1
               fi
 
               CURRENT_IMAGE_ID=$(docker image inspect "$CURRENT_IMAGE" --format '{{.Id}}')
 
-              docker images inbound-api --format '{{.ID}} {{.CreatedAt}}' \
-                | sort -k2,3,4,5 -r \
-                | awk '{print $1}' \
-                | while read IMAGE_ID; do
-                    IMAGE_ID_FULL=$(docker image inspect "$IMAGE_ID" --format '{{.Id}}')
-                    if [ "$IMAGE_ID_FULL" != "$CURRENT_IMAGE_ID" ]; then
-                      echo "Removing old image: $IMAGE_ID"
-                      docker rmi "$IMAGE_ID" || true
-                    fi
-                  done
+              echo "Current image: $CURRENT_IMAGE_ID"
+
+              docker images -aq | while read IMAGE_ID; do
+                IMAGE_ID_FULL=$(docker image inspect "$IMAGE_ID" --format '{{.Id}}')
+
+                if [ "$IMAGE_ID_FULL" != "$CURRENT_IMAGE_ID" ]; then
+                  echo "Removing old image: $IMAGE_ID"
+                  docker rmi "$IMAGE_ID" || true
+                fi
+              done
+                              
