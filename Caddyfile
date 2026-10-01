@@ -2,4 +2,8 @@
     handle_path /server/* {
         reverse_proxy my_service:9001
     }
+
+    handle {
+        reverse_proxy inbound-frontend:80
+    }
 }
