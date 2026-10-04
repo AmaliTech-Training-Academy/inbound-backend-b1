@@ -1,0 +1,21 @@
+# Source - https://stackoverflow.com/a/78747651
+# Posted by Delta George, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-10-04, License - CC BY-SA 4.0
+
+name: id-token
+
+on:
+  push:
+    branches:
+      - dev
+      - feat/devops-deployment
+
+jobs:
+  get-id-token:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - run: |
+          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://demo" | jq -r .value)
+          echo $ID_TOKEN | base64
