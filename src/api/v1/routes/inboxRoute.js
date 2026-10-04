@@ -1,5 +1,5 @@
 import express from 'express'
-import { createInbox, getInboxInfo, extendInboxTime } from '../controllers/inboxController.js';
+import { createInbox, getInboxInfo, extendInboxTime, generateCustomInbox } from '../controllers/inboxController.js';
 import { requireSessionAccess } from '../../../middlewares/requireSessionAccess.js';
 import { messageRouter } from './messageRoute.js';
 import { globalRateLimit } from '../../../utils/rateLimit.js';
@@ -10,6 +10,9 @@ router.post('/',
     createInbox
 )
 
+router.post('/custom',
+    generateCustomInbox
+)
 router.get('/:id',
     requireSessionAccess,
     getInboxInfo
