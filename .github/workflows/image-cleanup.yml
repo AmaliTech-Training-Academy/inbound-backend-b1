@@ -3,7 +3,7 @@ name: ECR Image Cleanup
 on:
   workflow_run:
     workflows:
-      - Inbound-Server-Deployment
+      - Inbound-Server-deployment-Pipeline
     types:
       - completed
 

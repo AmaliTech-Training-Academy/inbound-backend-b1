@@ -6,7 +6,7 @@ on:
     branches:
       - dev
       - feat/devops-deployment
-      # - feat/caddy-proxy-with-docker
+
 jobs:
     ci:
         name: Code Quality Checks
