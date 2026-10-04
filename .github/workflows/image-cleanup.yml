@@ -6,6 +6,9 @@ on:
       - Inbound-Server-deployment-Pipeline
     types:
       - completed
+permissions:
+  id-token: write 
+  contents: read
 
 env:
   AWS_REGION: eu-west-1

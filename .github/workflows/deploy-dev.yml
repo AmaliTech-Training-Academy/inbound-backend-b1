@@ -6,7 +6,9 @@ on:
     branches:
       - dev
       - feat/devops-deployment
-
+permissions:
+  id-token: write 
+  contents: read
 jobs:
     ci:
         name: Code Quality Checks
