@@ -526,6 +526,85 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/{id}": {
+      delete: {
+        tags: ["Inbox"],
+        summary: "Permanently delete an inbox",
+        operationId: "deleteInbox",
+        description:
+          "Immediately and permanently deletes the inbox along with every message and attachment it owns. Runs as a single transaction that removes attachments first, then messages, then the inbox, so nothing is left for a later cleanup pass. This is a hard delete: the records are gone as soon as the request succeeds and cannot be recovered, and the address becomes free for reuse. Repeating the request returns 404 because the inbox no longer exists.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            $ref: "#/components/parameters/InboxId",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Inbox and its messages and attachments deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/DeleteInboxResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Inbox deleted successfully",
+                  data: {
+                    id: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
+                    deletedMessages: 3,
+                    deletedAttachments: 2,
+                  },
+                },
+              },
+            },
+          },
+          ...sessionBearerErrors,
+          400: {
+            description: "Missing inbox ID",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox ID is required",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found, or already deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox Not Found",
+                },
+              },
+            },
+          },
+          500: {
+            description: "Deletion failed; the transaction was rolled back",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Unable to delete inbox",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/v1/inbox/messages": {
       get: {
         tags: ["Messages"],
@@ -975,6 +1054,17 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
         example: "message-uuid",
       },
+      InboxId: {
+        name: "id",
+        in: "path",
+        required: true,
+        description: "Inbox UUID.",
+        schema: {
+          type: "string",
+          format: "uuid",
+        },
+        example: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
+      },
     },
     schemas: {
       ErrorResponse: {
@@ -1253,6 +1343,41 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               extendCount: {
                 type: "integer",
                 minimum: 1,
+              },
+            },
+          },
+        },
+      },
+      DeleteInboxResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Inbox deleted successfully",
+          },
+          data: {
+            type: "object",
+            required: ["id", "deletedMessages", "deletedAttachments"],
+            properties: {
+              id: {
+                type: "string",
+                format: "uuid",
+                description: "UUID of the inbox that was permanently removed.",
+              },
+              deletedMessages: {
+                type: "integer",
+                minimum: 0,
+                description: "Number of message rows removed with the inbox.",
+              },
+              deletedAttachments: {
+                type: "integer",
+                minimum: 0,
+                description: "Number of attachment rows removed with the inbox's messages.",
               },
             },
           },

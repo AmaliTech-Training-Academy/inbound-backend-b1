@@ -212,6 +212,11 @@ export const generateCustomInbox = asyncHandler(async (req, res) => {
   }
 });
 
+
+
+
+
+
 export const getInboxInfo = asyncHandler(async (req, res) => {
   try {
     const inboxId = req.params.id;
@@ -358,6 +363,73 @@ export const extendInboxTime = asyncHandler(async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to extend inbox time",
+    });
+  }
+});
+
+
+
+export const deleteInbox = asyncHandler(async (req, res) => {
+  try {
+    const inboxId = req.params.id;
+    if (!inboxId) {
+      return res.status(400).json({
+        success: false,
+        message: "Inbox ID is required",
+      });
+    }
+
+    const inbox = await prisma.inbox.findFirst({
+      where: { id: inboxId, sessionId: req.session.id },
+    });
+
+    if (!inbox) {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox Not Found",
+      });
+    }
+
+    // Hard delete: children first so the removal never depends on cascade behavior.
+    const { attachmentCount, messageCount } = await prisma.$transaction(
+      async (transaction) => {
+        const attachments = await transaction.attachment.deleteMany({
+          where: { message: { inboxId } },
+        });
+        const messages = await transaction.message.deleteMany({
+          where: { inboxId },
+        });
+        await transaction.inbox.delete({ where: { id: inboxId } });
+
+        return {
+          attachmentCount: attachments.count,
+          messageCount: messages.count,
+        };
+      },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Inbox deleted successfully",
+      data: {
+        id: inboxId,
+        deletedMessages: messageCount,
+        deletedAttachments: attachmentCount,
+      },
+    });
+  } catch (error) {
+    console.error("Inbox deletion error:", error);
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox Not Found",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to delete inbox",
     });
   }
 });

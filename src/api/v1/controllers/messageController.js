@@ -18,6 +18,13 @@ export const fetchInboxMessages = asyncHandler(async (req, res) => {
         select: {
           id: true,
           subject: true,
+          inbox: {
+            select: {
+              id: true,
+              isDeleted: true,
+              expiresAt: true,
+            },
+          },
           fromName: true,
           fromAddress: true,
           toAddress: true,
@@ -36,6 +43,13 @@ export const fetchInboxMessages = asyncHandler(async (req, res) => {
         },
       });
 
+
+      if(inbox?.isDeleted || inbox?.expiresAt <= new Date()) {
+        return res.status(404).json({
+          success: false,
+          message: "Inbox not found or has expired",
+        });
+      }
     res.status(200).json({
       success: true,
       message: "Inbox messages fetched successfully",
