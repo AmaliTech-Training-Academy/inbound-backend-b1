@@ -12,6 +12,9 @@ const {
       findMany: vi.fn(),
       update: vi.fn(),
     },
+    inbox: {
+      findFirst: vi.fn(),
+    },
   },
 
   hashTokenMock: vi.fn(() => "hashed-token"),
@@ -50,13 +53,15 @@ const session = {
   lastExtendedAt: null,
 };
 
+const ownedInboxWhere = (inboxId) => ({
+  sessionId: session.id,
+  isDeleted: false,
+  expiresAt: { gt: expect.any(Date) },
+  ...(inboxId ? { id: inboxId } : {}),
+});
+
 const ownedInboxFilter = (inboxId) => ({
-  is: expect.objectContaining({
-    sessionId: session.id,
-    isDeleted: false,
-    expiresAt: { gt: expect.any(Date) },
-    ...(inboxId ? { id: inboxId } : {}),
-  }),
+  is: expect.objectContaining(ownedInboxWhere(inboxId)),
 });
 
 beforeEach(() => {
@@ -68,6 +73,8 @@ beforeEach(() => {
 
 describe("fetchInboxMessages", () => {
   it("should return all messages with attachment counts", async () => {
+    prismaMock.inbox.findFirst.mockResolvedValue({ id: "inbox-123" });
+
     prismaMock.message.findMany.mockResolvedValue([
       {
         id: "message-123",
@@ -90,6 +97,11 @@ describe("fetchInboxMessages", () => {
     const res = createResponse();
 
     await fetchInboxMessages(req, res);
+
+    expect(prismaMock.inbox.findFirst).toHaveBeenCalledWith({
+      where: ownedInboxWhere(),
+      select: { id: true },
+    });
 
     expect(prismaMock.message.findMany).toHaveBeenCalledWith({
       where: {
@@ -136,6 +148,31 @@ describe("fetchInboxMessages", () => {
           },
         ],
       },
+    });
+  });
+  it("should return 404 when the inbox is deleted or expired", async () => {
+    prismaMock.inbox.findFirst.mockResolvedValue(null);
+
+    const req = {
+      session,
+    };
+
+    const res = createResponse();
+
+    await fetchInboxMessages(req, res);
+
+    expect(prismaMock.inbox.findFirst).toHaveBeenCalledWith({
+      where: ownedInboxWhere(),
+      select: { id: true },
+    });
+
+    expect(prismaMock.message.findMany).not.toHaveBeenCalled();
+
+    expect(res.status).toHaveBeenCalledWith(404);
+
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Inbox not found or has expired",
     });
   });
 });
