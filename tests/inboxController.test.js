@@ -38,7 +38,7 @@ vi.mock("../src/lib/addressGenerator.js", () => ({
 }));
 
 process.env.DOMAIN_ADDRESS ??= "inbound.example.test";
-const { createInbox, extendInboxTime } = await import(
+const { createInbox, extendInboxTime, getInboxInfo } = await import(
   "../src/api/v1/controllers/inboxController.js"
 );
 
@@ -302,5 +302,64 @@ describe("extendInboxTime", () => {
       },
     });
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("returns 410 when attempting to extend an already expired inbox", async () => {
+    const now = new Date("2026-09-27T21:40:00.000Z");
+    const pastExpiresAt = new Date("2026-09-27T21:35:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    prismaMock.inbox.findFirst.mockResolvedValue({
+      id: "inbox-expired",
+      sessionId: "session-123",
+      expiresAt: pastExpiresAt,
+      isDeleted: false,
+      session: { expiresAt: pastExpiresAt },
+    });
+
+    const req = {
+      params: { id: "inbox-expired" },
+      session: { id: "session-123" },
+    };
+    const res = createResponse();
+
+    await extendInboxTime(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(410);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Inbox has expired",
+    });
+    expect(prismaMock.inbox.update).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+});
+
+describe("getInboxInfo expiration safety net", () => {
+  it("returns 410 when accessing an expired inbox before cleanup", async () => {
+    const pastExpiresAt = new Date(Date.now() - 60000);
+    prismaMock.inbox.findFirst.mockResolvedValue({
+      id: "inbox-old",
+      sessionId: "session-123",
+      address: "old@inbound.test",
+      expiresAt: pastExpiresAt,
+      isDeleted: false,
+      messages: [],
+    });
+
+    const req = {
+      params: { id: "inbox-old" },
+      session: { id: "session-123" },
+    };
+    const res = createResponse();
+
+    await getInboxInfo(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(410);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Inbox has expired",
+    });
   });
 });

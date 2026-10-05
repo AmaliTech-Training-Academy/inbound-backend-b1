@@ -18,13 +18,6 @@ export const getSessionInfo = asyncHandler(async (req, res) => {
       where: {
         tokenHash: sessionTokenHash,
       },
-      include: {
-        _count: {
-          select: {
-            inboxes: true,
-          },
-        },
-      },
     });
 
     if (!session) {
@@ -41,6 +34,14 @@ export const getSessionInfo = asyncHandler(async (req, res) => {
       });
     }
 
+    const activeInboxCount = await prisma.inbox.count({
+      where: {
+        sessionId: session.id,
+        isDeleted: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Session Info Fetched Success",
@@ -48,7 +49,7 @@ export const getSessionInfo = asyncHandler(async (req, res) => {
         createdAt: session.createdAt,
         expiresAt: session.expiresAt,
         lastExtendedAt: session.lastExtendedAt,
-        inboxCount: session._count.inboxes,
+        inboxCount: activeInboxCount,
       },
     });
   } catch (error) {
@@ -81,6 +82,10 @@ export const getSessionInboxes = asyncHandler(async (req, res) => {
       },
       include: {
         inboxes: {
+          where: {
+            isDeleted: false,
+            expiresAt: { gt: new Date() },
+          },
           include: {
             _count: {
               select: {
