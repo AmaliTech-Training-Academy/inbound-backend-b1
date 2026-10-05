@@ -112,5 +112,14 @@ export function generateAddress(domain = process.env.DOMAIN_ADDRESS) {
   };
 }
 
+
+export function getCustomDomainAddress(domain = process.env.DOMAIN_ADDRESS, localPart) {
+
+
+  return {
+    localPart,
+    address: `${localPart}@${domain}`,
+  };
+}
 // you can test the generation of Address
-console.log(generateAddress())
+// console.log(generateAddress())

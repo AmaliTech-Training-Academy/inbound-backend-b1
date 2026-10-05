@@ -5,6 +5,7 @@ const {
   generateTokenMock,
   hashTokenMock,
   generateAddressMock,
+  getCustomDomainAddressMock,
 } = vi.hoisted(() => ({
   prismaMock: {
     inbox: {
@@ -22,6 +23,11 @@ const {
   generateTokenMock: vi.fn(),
   hashTokenMock: vi.fn((token) => `${token}-hash`),
   generateAddressMock: vi.fn(),
+  // Mirrors the real helper's (domain, localPart) signature.
+  getCustomDomainAddressMock: vi.fn((domain, localPart) => ({
+    localPart,
+    address: `${localPart}@${domain}`,
+  })),
 }));
 
 vi.mock("../src/configs/prisma.js", () => ({
@@ -35,10 +41,11 @@ vi.mock("../src/utils/generateToken.js", () => ({
 
 vi.mock("../src/lib/addressGenerator.js", () => ({
   generateAddress: generateAddressMock,
+  getCustomDomainAddress: getCustomDomainAddressMock,
 }));
 
 process.env.DOMAIN_ADDRESS ??= "inbound.example.test";
-const { createInbox, extendInboxTime } = await import(
+const { createInbox, extendInboxTime, generateCustomInbox } = await import(
   "../src/api/v1/controllers/inboxController.js"
 );
 
@@ -243,6 +250,153 @@ describe("createInbox", () => {
         },
       }),
     });
+  });
+});
+
+describe("generateCustomInbox", () => {
+  const createRequest = (localPart, headers) => ({
+    body: { localPart },
+    ...(headers ? { headers } : {}),
+  });
+
+  it("creates an inbox at the requested address", async () => {
+    generateTokenMock.mockReturnValueOnce("session-token");
+    prismaMock.inbox.create.mockImplementation(async ({ data }) => ({
+      id: "inbox-123",
+      address: data.address,
+      expiresAt: data.expiresAt,
+    }));
+
+    const res = createResponse();
+
+    await generateCustomInbox(createRequest("mycustominbox"), res);
+
+    expect(getCustomDomainAddressMock).toHaveBeenCalledWith(
+      "inbound.example.test",
+      "mycustominbox",
+    );
+    expect(prismaMock.inbox.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        address: "mycustominbox@inbound.example.test",
+        localPart: "mycustominbox",
+        domain: "inbound.example.test",
+      }),
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({
+        address: "mycustominbox@inbound.example.test",
+        id: "inbox-123",
+      }),
+    }));
+  });
+
+  it("does not retry the create when the address is already taken", async () => {
+    prismaMock.inbox.create.mockRejectedValue(
+      Object.assign(new Error("unique"), {
+        code: "P2002",
+        meta: { target: ["address"] },
+      }),
+    );
+
+    const res = createResponse();
+
+    await generateCustomInbox(createRequest("taken"), res);
+
+    expect(prismaMock.inbox.create).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Inbox with this localPart already exists.",
+    });
+  });
+
+  it.each([
+    ["a non-string", 42],
+    ["an empty string", ""],
+    ["non-alphanumeric characters", "not valid!"],
+    ["a dotted local part", "first.last"],
+    ["a local part longer than 64 characters", "a".repeat(65)],
+  ])("rejects %s with a 400", async (_label, localPart) => {
+    const res = createResponse();
+
+    await generateCustomInbox(createRequest(localPart), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(prismaMock.inbox.create).not.toHaveBeenCalled();
+    expect(prismaMock.session.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request with no body", async () => {
+    const res = createResponse();
+
+    await generateCustomInbox({}, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(prismaMock.inbox.create).not.toHaveBeenCalled();
+  });
+
+  it("returns not found when the provided session token is unknown", async () => {
+    prismaMock.session.findUnique.mockResolvedValue(null);
+
+    const res = createResponse();
+
+    await generateCustomInbox(
+      createRequest("mycustominbox", {
+        authorization: "Bearer unknown-session-token",
+      }),
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(prismaMock.inbox.create).not.toHaveBeenCalled();
+  });
+
+  it("joins a live session when its bearer token is supplied", async () => {
+    const sessionExpiresAt = new Date(Date.now() + 60 * 1000);
+    prismaMock.session.findUnique.mockResolvedValue({
+      id: "session-123",
+      expiresAt: sessionExpiresAt,
+    });
+    prismaMock.inbox.create.mockImplementation(async ({ data }) => ({
+      id: "inbox-123",
+      address: data.address,
+      expiresAt: data.expiresAt,
+    }));
+
+    const res = createResponse();
+
+    await generateCustomInbox(
+      createRequest("mycustominbox", {
+        authorization: "Bearer live-session-token",
+      }),
+      res,
+    );
+
+    expect(prismaMock.inbox.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        session: { connect: { id: "session-123" } },
+      }),
+    });
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it("reports a 500 instead of leaving the request hanging", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    prismaMock.inbox.create.mockRejectedValue(new Error("database is down"));
+
+    const res = createResponse();
+
+    await generateCustomInbox(createRequest("mycustominbox"), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Internal Server Error",
+    });
+
+    consoleError.mockRestore();
   });
 });
 

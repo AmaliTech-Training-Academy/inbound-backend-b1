@@ -1,5 +1,5 @@
 import asyncHandler from "express-async-handler";
-import { generateAddress } from "../../../lib/addressGenerator.js";
+import { generateAddress, getCustomDomainAddress } from "../../../lib/addressGenerator.js";
 import { generateToken, hashToken } from "../../../utils/generateToken.js";
 import { MAIL_DOMAIN, INBOX_TTL_MINUTES } from "../../../configs/env.js";
 import { getCurrentTime } from "../../../utils/getCurrentTime.js";
@@ -79,7 +79,7 @@ export const createInbox = asyncHandler(async (req, res) => {
               expiresAt: sessionExpiresAt,
             },
             id: inbox.id,
-            address: inbox.address,  
+            address: inbox.address,
             expiresAt: inbox.expiresAt,
           },
         });
@@ -93,6 +93,115 @@ export const createInbox = asyncHandler(async (req, res) => {
         }
         throw error;
       }
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
+
+export const generateCustomInbox = asyncHandler(async (req, res) => {
+  try {
+    const expiresAt = new Date(Date.now() + INBOX_TTL_MINUTES * 60 * 1000);
+
+    const authorization = req.headers?.authorization;
+    const providedSessionToken = authorization?.startsWith("Bearer ")
+      ? authorization.substring(7).trim()
+      : null;
+    let session = null;
+
+    if (!session && providedSessionToken) {
+      session = await prisma.session.findUnique({
+        where: { tokenHash: hashToken(providedSessionToken) },
+      });
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: "Session Not Found",
+        });
+      }
+    }
+
+
+    const localPart = req.body?.localPart;
+
+    if (
+      typeof localPart !== "string" ||
+      localPart.length > 64 ||
+      !/^[a-zA-Z0-9]+$/.test(localPart)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid localPart. It must be a non-empty alphanumeric string of at most 64 characters.",
+      });
+    }
+
+    const reuseSession = Boolean(
+      session && providedSessionToken && new Date() < session.expiresAt,
+    );
+    const sessionToken = reuseSession ? providedSessionToken : generateToken();
+    const sessionTokenHash = reuseSession ? null : hashToken(sessionToken);
+    const sessionExpiresAt =
+      reuseSession && session.expiresAt > expiresAt
+        ? session.expiresAt
+        : expiresAt;
+
+    const { address } = getCustomDomainAddress(MAIL_DOMAIN, localPart);
+
+    try {
+      //inbox creating in db
+      const data = {
+        address,
+        localPart,
+        domain: MAIL_DOMAIN,
+        expiresAt,
+        session: reuseSession
+          ? { connect: { id: session.id } }
+          : {
+              create: {
+                tokenHash: sessionTokenHash,
+                expiresAt,
+              },
+            },
+      };
+      const inbox = reuseSession
+        ? await prisma.$transaction(async (transaction) => {
+            const createdInbox = await transaction.inbox.create({ data });
+            if (session.expiresAt < expiresAt) {
+              await transaction.session.update({
+                where: { id: session.id },
+                data: { expiresAt },
+              });
+            }
+            return createdInbox;
+          })
+        : await prisma.inbox.create({ data });
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          session: {
+            token: sessionToken,
+            expiresAt: sessionExpiresAt,
+          },
+          id: inbox.id,
+          address: inbox.address,
+          expiresAt: inbox.expiresAt,
+        },
+      });
+    } catch (error) {
+   
+      if (error.code === "P2002") {
+        return res.status(409).json({
+          success: false,
+          message: "Inbox with this localPart already exists.",
+        });
+      }
+      throw error;
     }
   } catch (error) {
     console.log(error);
