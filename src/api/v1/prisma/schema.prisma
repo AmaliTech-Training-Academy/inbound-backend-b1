@@ -94,8 +94,9 @@ model Attachment {
   filename    String
   contentType String
   sizeBytes   Int
+  content     Bytes?
 
-  objectKey String
+  objectKey String?
   checksum  String?
 
   createdAt DateTime @default(now())

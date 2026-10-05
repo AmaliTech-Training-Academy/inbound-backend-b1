@@ -74,11 +74,18 @@ const PATTERNS = [
 let sequence = crypto.randomInt(0, 36 ** 2);
 
 
+// 6 base36 chars total: a ~21min time slice, an in-process counter, and a
+// random tail. Keeps the local part short; rare collisions are absorbed by
+// the unique constraint + retry in createInbox.
 function uniqueSuffix() {
-  const time = Math.floor(Date.now() / 1000).toString(36);
+  const time = Math.floor(Date.now() / 1000)
+    .toString(36)
+    .slice(-2);
   sequence = (sequence + 1) % (36 ** 2);
   const seq = sequence.toString(36).padStart(2, "0");
-  const rand = crypto.randomInt(36 ** 3).toString(36).padStart(3, "0");
+  const rand = crypto.randomInt(36 ** 2)
+    .toString(36)
+    .padStart(2, "0");
 
   return `${time}${seq}${rand}`;
 }
@@ -105,5 +112,14 @@ export function generateAddress(domain = process.env.DOMAIN_ADDRESS) {
   };
 }
 
+
+export function getCustomDomainAddress(domain = process.env.DOMAIN_ADDRESS, localPart) {
+
+
+  return {
+    localPart,
+    address: `${localPart}@${domain}`,
+  };
+}
 // you can test the generation of Address
 // console.log(generateAddress())

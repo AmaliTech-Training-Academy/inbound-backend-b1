@@ -44,16 +44,6 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
         throw new PermanentIngestionError("Invalid recipient address.");
     }
 
-    //check inbox
-    const  inbox = await prisma.inbox.findFirst({
-        where: {address: recipient, isDeleted: false, expiresAt:{gt: new Date()}},
-        select: {id:true, address:true, expiresAt: true},
-    })
-    if (!inbox){
-        throw new PermanentIngestionError("Inbox not found,unknown or expired")
-
-    }
-    //check size
     const rawEmail = Buffer.isBuffer(bodyMime)
         ? bodyMime
         : hasRawMime
@@ -63,21 +53,31 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
         throw new PermanentIngestionError("Message exceeds size limit.")
     }
 
-    const parsed = rawEmail
-        ? await parseInboundEmail(rawEmail)
-        : {
+    const inboxPromise = prisma.inbox.findFirst({
+        where: {address: recipient, isDeleted: false, expiresAt:{gt: new Date()}},
+        select: {id:true, address:true, expiresAt: true},
+    })
+
+    const parsedPromise = rawEmail
+        ? parseInboundEmail(rawEmail)
+        : Promise.resolve({
             fromAddress: getAddress(body.from || body.sender),
             fromName: getName(body.from),
             subject: body.subject || "No Subject",
             textBody: body["body-plain"] || "",
             htmlBody: sanitizeHtmlBody(body["body-html"] || ""),
             attachments: [],
-        };
-    const attachmentBytes = parsed.attachments.reduce((total,item)=>total + item.sizeBytes,0)
+        });
 
-    if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
-        throw new PermanentIngestionError("Attachment Exceeds Size Limit.")
+    const [inbox, parsed] = await Promise.all([inboxPromise, parsedPromise]);
+    if (!inbox){
+        throw new PermanentIngestionError("Inbox not found,unknown or expired")
+
     }
+
+    const acceptedAttachments = (parsed.attachments || []).filter((attachment)=>(
+        Buffer.isBuffer(attachment.content) && attachment.content.byteLength <= MAX_ATTACHMENT_BYTES
+    ))
 
     const message = await prisma.message.create({
         data: {
@@ -93,11 +93,12 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
             sizeBytes: rawEmail?.length || Buffer.byteLength(parsed.textBody + parsed.htmlBody),
             rawHtmlSize: parsed.rawHtmlSize ?? null,
             attachments: {
-                create: parsed.attachments.map((attachment) => ({
-                    filename: attachment.filename,
-                    contentType: attachment.contentType,
-                    sizeBytes: attachment.sizeBytes,
-                    checksum: attachment.checksum,
+                create: acceptedAttachments.map((attachment) => ({
+                    filename: attachment.filename || "attachment",
+                    contentType: attachment.contentType || "application/octet-stream",
+                    sizeBytes: attachment.content.byteLength,
+                    content: attachment.content,
+                    checksum: attachment.checksum || null,
                     objectKey: `mailgun:${body.token}:${attachment.filename}`,
                     expiresAt: inbox.expiresAt,
                 })),

@@ -94,6 +94,50 @@ describe("ingestMailgunMessage", () => {
 		});
 	});
 
+	it("parses raw MIME while the inbox lookup is pending", async () => {
+		const prisma = createPrisma();
+		let resolveInbox;
+		let resolveParsed;
+		prisma.inbox.findFirst.mockReturnValue(
+			new Promise((resolve) => {
+				resolveInbox = resolve;
+			}),
+		);
+		parseMock.mockReturnValue(
+			new Promise((resolve) => {
+				resolveParsed = resolve;
+			}),
+		);
+		const body = {
+			...signedWebhookFields(),
+			recipient: activeInbox.address,
+			"body-mime": Buffer.from("raw MIME"),
+		};
+
+		const ingestion = ingestMailgunMessage({ body, prisma, signingKey });
+
+		expect(prisma.inbox.findFirst).toHaveBeenCalledOnce();
+		expect(parseMock).toHaveBeenCalledOnce();
+		expect(prisma.message.create).not.toHaveBeenCalled();
+
+		resolveInbox(activeInbox);
+		resolveParsed({
+			fromAddress: "sender@example.test",
+			fromName: "Sender",
+			subject: "Concurrent parse",
+			textBody: "body",
+			htmlBody: "",
+			rawHtmlSize: null,
+			attachments: [],
+		});
+
+		await expect(ingestion).resolves.toMatchObject({
+			duplicate: false,
+			message: { subject: "Concurrent parse" },
+		});
+		expect(prisma.message.create).toHaveBeenCalledOnce();
+	});
+
 	it("uses parsed text and sanitizes parsed HTML", async () => {
 		const prisma = createPrisma();
 		const body = {

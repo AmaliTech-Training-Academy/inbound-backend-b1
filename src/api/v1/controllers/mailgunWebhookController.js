@@ -18,10 +18,9 @@ export function createMailgunDashboardController() {
 export function createMailgunWebhookController({ prisma }) {
 	return async (req, res) => {
 		try {
+			console.log("Received Mailgun webhook:", req.body);
 			// multer (upload.any()) puts text fields in req.body, but the
-			// body-mime file part lands in req.files as a Buffer, not a string.
-			// ingestMailgunMessage() expects body["body-mime"] to be a string,
-			// so we merge it back in here before handing off.
+			// body-mime file part lands in req.files as a Buffer.
 			const bodyMimeFile = (req.files || []).find(
 				(file) => file.fieldname === "body-mime"
 			);
@@ -29,15 +28,20 @@ export function createMailgunWebhookController({ prisma }) {
 			const body = {
 				...req.body,
 				...(bodyMimeFile
-					? { "body-mime": bodyMimeFile.buffer.toString("utf8") }
+					? { "body-mime": bodyMimeFile.buffer }
 					: {}),
 			};
 
 			const result = await ingestMailgunMessage({ body, prisma });
-
+			const message = result?.message;
 			const io = req.app?.get("io");
-			if (io && result.message) {
-				publishNewMessage(io, result.message.inboxId, result.message);
+
+			if (io && message) {
+				try {
+					publishNewMessage(io, message.inboxId, message);
+				} catch (error) {
+					console.error("Failed to publish new Mailgun message:", error);
+				}
 			}
 
 			return res.status(202).json({
