@@ -6,9 +6,10 @@ on:
     branches:
       - dev
       - feat/devops-deployment
-permissions:
-  id-token: write 
-  contents: read
+
+env:
+  ECR_REPOSITORY: inbound-api
+
 jobs:
     ci:
         name: Code Quality Checks
