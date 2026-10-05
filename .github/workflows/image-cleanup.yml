@@ -6,9 +6,6 @@ on:
       - Inbound-Server-deployment-Pipeline
     types:
       - completed
-permissions:
-  id-token: write 
-  contents: read
 
 env:
   AWS_REGION: eu-west-1
@@ -25,13 +22,15 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
 
       - name: Clean old images
         run: |
           IMAGES=$(aws ecr describe-images \
             --repository-name $ECR_REPOSITORY \
+            --max-results 1000 \
             --query 'sort_by(imageDetails,&imagePushedAt)[:-5].imageDigest' \
             --output text)
 
