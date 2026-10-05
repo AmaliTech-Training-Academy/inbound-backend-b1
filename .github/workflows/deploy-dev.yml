@@ -93,7 +93,7 @@ jobs:
           uses: aws-actions/amazon-ecs-render-task-definition@v1
           with:
             task-definition: task-definition.json
-            container-name: inbound-api
+            container-name: Main
             image: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
         - name: Deploy to ECS
