@@ -2,39 +2,53 @@ import asyncHandler from "express-async-handler";
 import prisma from "../../../configs/prisma.js";
 import { sanitizeHtmlBody } from "../services/mailParserService.js";
 
+const activeSessionInboxWhere = (req) => ({
+  sessionId: req.session.id,
+  isDeleted: false,
+  expiresAt: { gt: new Date() },
+  ...(req.query?.inboxId ? { id: req.query.inboxId } : {}),
+});
+
 const activeSessionInboxFilter = (req) => ({
-  is: {
-    sessionId: req.session.id,
-    isDeleted: false,
-    expiresAt: { gt: new Date() },
-    ...(req.query?.inboxId ? { id: req.query.inboxId } : {}),
-  },
+  is: activeSessionInboxWhere(req),
 });
 
 export const fetchInboxMessages = asyncHandler(async (req, res) => {
   try {
+    const inbox = await prisma.inbox.findFirst({
+      where: activeSessionInboxWhere(req),
+      select: { id: true },
+    });
+
+    if (!inbox) {
+      return res.status(404).json({
+        success: false,
+        message: "Inbox not found or has expired",
+      });
+    }
+
     const messages = await prisma.message.findMany({
-        where: { inbox: activeSessionInboxFilter(req) },
-        select: {
-          id: true,
-          subject: true,
-          fromName: true,
-          fromAddress: true,
-          toAddress: true,
-          isRead: true,
-          status: true,
-          receivedAt: true,
-          expiresAt: true,
-          attachments: {
-            select: {
-              id: true,
-            },
+      where: { inbox: activeSessionInboxFilter(req) },
+      select: {
+        id: true,
+        subject: true,
+        fromName: true,
+        fromAddress: true,
+        toAddress: true,
+        isRead: true,
+        status: true,
+        receivedAt: true,
+        expiresAt: true,
+        attachments: {
+          select: {
+            id: true,
           },
         },
-        orderBy: {
-          receivedAt: "desc",
-        },
-      });
+      },
+      orderBy: {
+        receivedAt: "desc",
+      },
+    });
 
     res.status(200).json({
       success: true,

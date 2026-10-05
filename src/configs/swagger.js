@@ -1360,6 +1360,41 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
         },
       },
+      DeleteInboxResponse: {
+        type: "object",
+        required: ["success", "message", "data"],
+        properties: {
+          success: {
+            type: "boolean",
+            example: true,
+          },
+          message: {
+            type: "string",
+            example: "Inbox deleted successfully",
+          },
+          data: {
+            type: "object",
+            required: ["id", "deletedMessages", "deletedAttachments"],
+            properties: {
+              id: {
+                type: "string",
+                format: "uuid",
+                description: "UUID of the inbox that was permanently removed.",
+              },
+              deletedMessages: {
+                type: "integer",
+                minimum: 0,
+                description: "Number of message rows removed with the inbox.",
+              },
+              deletedAttachments: {
+                type: "integer",
+                minimum: 0,
+                description: "Number of attachment rows removed with the inbox's messages.",
+              },
+            },
+          },
+        },
+      },
       MessageResponse: {
         type: "object",
         required: ["success", "message", "data"],

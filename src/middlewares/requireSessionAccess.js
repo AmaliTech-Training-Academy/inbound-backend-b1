@@ -57,9 +57,7 @@ export const requireSessionAccess = async (req, res, next) => {
       });
     }
 
-    // Controllers scope every query with `sessionId: req.session.id`. Prisma
-    // drops filters whose value is undefined, so a missing id would expose
-    // every session's inboxes - fail closed instead.
+  
     if (!session.id) {
       throw new Error("Session record is missing its id");
     }
