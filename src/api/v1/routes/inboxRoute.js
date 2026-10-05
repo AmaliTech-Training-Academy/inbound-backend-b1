@@ -3,6 +3,7 @@ import { createInbox, getInboxInfo, extendInboxTime, generateCustomInbox } from 
 import { requireSessionAccess } from '../../../middlewares/requireSessionAccess.js';
 import { messageRouter } from './messageRoute.js';
 import { globalRateLimit } from '../../../utils/rateLimit.js';
+import { attachmentRouter } from './attachmentRoute.js';
 
 const router = express.Router();
 router.use(globalRateLimit);
@@ -25,6 +26,7 @@ router.patch('/extend/:id',
 
 router.use('/messages', messageRouter);
 
+router.use('/attachments', attachmentRouter);
 
 
 export {router as inboxRouter};

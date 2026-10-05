@@ -74,11 +74,10 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
         throw new PermanentIngestionError("Inbox not found,unknown or expired")
 
     }
-    const attachmentBytes = parsed.attachments.reduce((total,item)=>total + item.sizeBytes,0)
 
-    if (attachmentBytes > MAX_ATTACHMENT_BYTES) {
-        throw new PermanentIngestionError("Attachment Exceeds Size Limit.")
-    }
+    const acceptedAttachments = (parsed.attachments || []).filter((attachment)=>(
+        Buffer.isBuffer(attachment.content) && attachment.content.byteLength <= MAX_ATTACHMENT_BYTES
+    ))
 
     const message = await prisma.message.create({
         data: {
@@ -94,11 +93,12 @@ export async function ingestMailgunMessage({body, prisma, signingKey = process.e
             sizeBytes: rawEmail?.length || Buffer.byteLength(parsed.textBody + parsed.htmlBody),
             rawHtmlSize: parsed.rawHtmlSize ?? null,
             attachments: {
-                create: parsed.attachments.map((attachment) => ({
-                    filename: attachment.filename,
-                    contentType: attachment.contentType,
-                    sizeBytes: attachment.sizeBytes,
-                    checksum: attachment.checksum,
+                create: acceptedAttachments.map((attachment) => ({
+                    filename: attachment.filename || "attachment",
+                    contentType: attachment.contentType || "application/octet-stream",
+                    sizeBytes: attachment.content.byteLength,
+                    content: attachment.content,
+                    checksum: attachment.checksum || null,
                     objectKey: `mailgun:${body.token}:${attachment.filename}`,
                     expiresAt: inbox.expiresAt,
                 })),
