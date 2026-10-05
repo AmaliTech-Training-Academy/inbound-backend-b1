@@ -238,6 +238,10 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       description: "Authenticated message retrieval and read state operations.",
     },
     {
+      name: "Attachments",
+      description: "Authenticated binary downloads for attachments belonging to the current session.",
+    },
+    {
       name: "Mailgun",
       description: "Inbound Mailgun webhook endpoints.",
     },
@@ -526,42 +530,62 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
-    "/api/v1/inbox/{id}": {
-      delete: {
-        tags: ["Inbox"],
-        summary: "Permanently delete an inbox",
-        operationId: "deleteInbox",
+    "/api/v1/inbox/attachments/{attachmentId}": {
+      get: {
+        tags: ["Attachments"],
+        summary: "Download an email attachment",
+        operationId: "downloadAttachment",
         description:
-          "Immediately and permanently deletes the inbox along with every message and attachment it owns. Runs as a single transaction that removes attachments first, then messages, then the inbox, so nothing is left for a later cleanup pass. This is a hard delete: the records are gone as soon as the request succeeds and cannot be recovered, and the address becomes free for reuse. Repeating the request returns 404 because the inbox no longer exists.",
+          "Downloads the specified attachment when it belongs to an active inbox in the authenticated session. The response body contains the original attachment bytes. The server sets Content-Disposition to attachment using the stored filename, returns the validated stored media type, and disables browser content sniffing. Supply the session bearer token returned in data.session.token by POST /api/v1/inbox; the session ID is not an authorization credential.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
-            $ref: "#/components/parameters/InboxId",
+            $ref: "#/components/parameters/AttachmentId",
           },
         ],
         responses: {
           200: {
-            description: "Inbox and its messages and attachments deleted",
-            content: {
-              "application/json": {
+            description:
+              "Attachment downloaded successfully. Content-Type is the stored attachment media type when valid, otherwise application/octet-stream.",
+            headers: {
+              "Content-Disposition": {
+                description:
+                  "Forces the browser to download the file and includes its original filename.",
                 schema: {
-                  $ref: "#/components/schemas/DeleteInboxResponse",
+                  type: "string",
                 },
-                example: {
-                  success: true,
-                  message: "Inbox deleted successfully",
-                  data: {
-                    id: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
-                    deletedMessages: 3,
-                    deletedAttachments: 2,
-                  },
+                example: 'attachment; filename="invoice.pdf"',
+              },
+              "X-Content-Type-Options": {
+                description: "Prevents browsers from MIME-sniffing the response.",
+                schema: {
+                  type: "string",
+                  enum: ["nosniff"],
                 },
+                example: "nosniff",
+              },
+              "Cache-Control": {
+                description:
+                  "Prevents private attachment data from being stored by caches.",
+                schema: {
+                  type: "string",
+                },
+                example: "private, no-store",
+              },
+            },
+            content: {
+              "application/octet-stream": {
+                schema: {
+                  type: "string",
+                  format: "binary",
+                },
+                example: "Binary attachment data",
               },
             },
           },
           ...sessionBearerErrors,
           400: {
-            description: "Missing inbox ID",
+            description: "Attachment identifier is missing or invalid.",
             content: {
               "application/json": {
                 schema: {
@@ -569,13 +593,14 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 },
                 example: {
                   success: false,
-                  message: "Inbox ID is required",
+                  message: "Missing Attachment Id",
                 },
               },
             },
           },
           404: {
-            description: "Inbox not found, or already deleted",
+            description:
+              "Attachment does not exist, has no stored content, or is not accessible to the authenticated session.",
             content: {
               "application/json": {
                 schema: {
@@ -583,25 +608,12 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 },
                 example: {
                   success: false,
-                  message: "Inbox Not Found",
+                  message: "Attachment not found",
                 },
               },
             },
           },
-          500: {
-            description: "Deletion failed; the transaction was rolled back",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ErrorResponse",
-                },
-                example: {
-                  success: false,
-                  message: "Unable to delete inbox",
-                },
-              },
-            },
-          },
+          500: errorResponse,
         },
       },
     },
@@ -1054,16 +1066,16 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
         example: "message-uuid",
       },
-      InboxId: {
-        name: "id",
+      AttachmentId: {
+        name: "attachmentId",
         in: "path",
         required: true,
-        description: "Inbox UUID.",
+        description: "UUID of the attachment to download.",
         schema: {
           type: "string",
           format: "uuid",
         },
-        example: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
+        example: "69c9bf3b-dee8-48d8-968a-7e961282f8cf",
       },
     },
     schemas: {
