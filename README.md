@@ -25,9 +25,10 @@ src/
 		services/          Mailgun, MIME parsing, and ingestion logic
 		prisma/            Prisma schema
 	configs/              Prisma, environment, Swagger, and WebSocket setup
+	jobs/                 Scheduled background workers (cleanup worker)
 	lib/                  Address and email helpers
 	middlewares/          Bearer-token inbox authorization
-	scripts/              Mailgun configuration and webhook simulation
+	scripts/              Mailgun configuration, webhook simulation, and cleanup CLI
 tests/                  Vitest unit and integration-style tests
 ```
 
@@ -59,6 +60,9 @@ MAX_MESSAGE_SIZE_MB=25
 MAX_ATTACHMENT_SIZE_MB=10
 ALLOWED_ORIGINS='["http://localhost:3000"]'
 CLIENT_ORIGIN="http://localhost:3000"
+
+CLEANUP_CRON_SCHEDULE="0 */6 * * *"
+DISABLE_CLEANUP_CRON=false
 ```
 
 `DOMAIN_ADDRESS` is used when generating inbox addresses. `INBOX_DOMAIN` is used by the Mailgun route configuration script and should normally represent the same receiving domain. Keep signing keys and API keys outside source control.
@@ -108,6 +112,18 @@ The default server address is `http://localhost:9001`.
 | `npm run prisma:studio` | Open Prisma Studio on port `10129`. |
 
 For production schema changes, review and apply a proper Prisma migration instead of relying on `db push`.
+
+### Background Cleanup & Maintenance Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run cleanup` | Manually purge expired inboxes, messages, attachments, and sessions. |
+| `npm test` | Run the Vitest unit and integration test suite. |
+| `npm run mailgun:simulate-webhook` | Simulate inbound delivery with optional attachment payloads. |
+| `npm run mailgun:configure-inbound` | Configure receiving routes in Mailgun via API. |
+
+A background cleanup worker ([`src/jobs/cleanupJob.js`](src/jobs/cleanupJob.js)) also runs automatically on server start every 6 hours (`0 */6 * * *`) by default.
+
 
 ## Swagger API Documentation
 

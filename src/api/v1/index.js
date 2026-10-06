@@ -11,6 +11,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import sanitizeHtml from "sanitize-html";
+import { startCleanupCron } from "../../jobs/cleanupJob.js";
 
 const app = express();
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDefinition));
@@ -111,8 +112,6 @@ app.use(
 //   next();
 // });
 
-
-
 app.use(cookieParser());
 app.disable("x-powered-by");
 
@@ -126,8 +125,12 @@ app.set("io", io);
 app.use(initRoute);
 app.use(v1Router);
 
+let cleanupWorker = null;
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
+  if (process.env.NODE_ENV !== "test") {
+    cleanupWorker = startCleanupCron();
+  }
 });
 
-export { app };
+export { app, server, cleanupWorker };

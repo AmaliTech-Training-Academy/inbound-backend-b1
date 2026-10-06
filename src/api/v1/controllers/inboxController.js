@@ -318,11 +318,17 @@ export const extendInboxTime = asyncHandler(async (req, res) => {
       });
     }
 
-    const extensionMinutes = 5;
     const now = new Date();
-    const baseTime = inbox.expiresAt > now ? inbox.expiresAt : now;
+    if (now >= inbox.expiresAt) {
+      return res.status(410).json({
+        success: false,
+        message: "Inbox has expired",
+      });
+    }
+
+    const extensionMinutes = 5;
     const expiresAt = new Date(
-      baseTime.getTime() + extensionMinutes * 60 * 1000,
+      inbox.expiresAt.getTime() + extensionMinutes * 60 * 1000,
     );
 
     const sessionExpiresAt =
