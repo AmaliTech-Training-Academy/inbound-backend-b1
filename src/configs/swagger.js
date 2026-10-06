@@ -13,38 +13,9 @@ const errorResponse = {
   },
 };
 
+// Every authenticated route is guarded by requireSessionAccess, so a rejected
+// request can only fail with one of these three shapes.
 const bearerErrors = {
-  401: {
-    description: "Missing or invalid bearer token",
-    content: {
-      "application/json": {
-        schema: {
-          $ref: "#/components/schemas/ErrorResponse",
-        },
-        example: {
-          success: false,
-          message: "Authorization token is required",
-        },
-      },
-    },
-  },
-  410: {
-    description: "Inbox has expired",
-    content: {
-      "application/json": {
-        schema: {
-          $ref: "#/components/schemas/ErrorResponse",
-        },
-        example: {
-          success: false,
-          message: "Inbox has expired",
-        },
-      },
-    },
-  },
-};
-
-const sessionBearerErrors = {
   401: {
     description: "Missing or invalid session bearer token",
     content: {
@@ -71,12 +42,6 @@ const sessionBearerErrors = {
               message: "Session Not Found",
             },
           },
-          missingSessionToken: {
-            value: {
-              success: false,
-              message: "Session token is required",
-            },
-          },
         },
       },
     },
@@ -95,16 +60,16 @@ const sessionBearerErrors = {
       },
     },
   },
-  404: {
-    description: "Session no longer exists",
+  429: {
+    description: "Rate limit exceeded (100 requests per IP per 15 minutes)",
     content: {
       "application/json": {
         schema: {
           $ref: "#/components/schemas/ErrorResponse",
         },
         example: {
-          success: false,
-          message: "Session Not Found",
+          status: 429,
+          message: "Too many requests from this IP, please try again later.",
         },
       },
     },
@@ -118,6 +83,13 @@ const swaggerDefinition = {
     version: "1.0.0",
     description: `## Overview
 OpenAPI documentation for the temporary inbound-email service. The service creates short-lived inboxes, receives Mailgun webhooks, parses MIME messages, sanitizes HTML, and stores messages in PostgreSQL.
+
+---
+
+## Authentication
+\`POST /api/v1/inbox\` and \`POST /api/v1/inbox/custom\` create a session and return its raw token as \`data.session.token\`. Every other route except \`GET /\`, \`GET /api/v1/health\`, and the Mailgun webhooks requires that value as \`Authorization: Bearer <session token>\`. Tokens are stored as SHA-256 hashes and are returned only at creation time. Inbox-scoped routes additionally require the inbox to belong to the calling session.
+
+All routes under \`/api/v1\` are rate limited to 100 requests per IP per 15 minutes.
 
 ---
 
@@ -136,7 +108,7 @@ const socket = io("http://localhost:9001", {
 CORS origins can be customized via the \`CLIENT_ORIGIN\` environment variable (defaults to \`*\`).
 
 ### 2. Authenticated Room Subscription: \`join-inbox\`
-Clients join an isolated room scoped to a specific inbox by providing the inbox address and raw token.
+Clients join an isolated room scoped to a specific inbox by providing the inbox address and the session token that owns it.
 
 - **Event:** \`join-inbox\`
 - **Direction:** Client to Server
@@ -144,7 +116,7 @@ Clients join an isolated room scoped to a specific inbox by providing the inbox 
 \`\`\`json
 {
   "address": "user-abc123@domain.com",
-  "token": "raw-inbox-token"
+  "token": "raw-session-token"
 }
 \`\`\`
 - **Acknowledgement Callback:**
@@ -163,8 +135,8 @@ Clients join an isolated room scoped to a specific inbox by providing the inbox 
     }
     \`\`\`
   - **Possible Error Reasons:**
-    - \`"address and token are required"\`: Missing or empty \`address\` or \`token\` fields.
-    - \`"invalid or expired inbox credentials"\`: The address does not exist, token does not match, or the inbox has expired.
+    - \`"address and token are required"\`: Missing or blank \`address\` or \`token\` fields.
+    - \`"invalid or expired inbox credentials"\`: The address is unknown, the token does not match the owning session, or the inbox or its session has expired or been deleted.
     - \`"unable to validate inbox credentials"\`: Database or server error during validation.
   - **Multi-Inbox Subscription:** Clients can subscribe to multiple inboxes simultaneously on the same socket connection to receive live updates across all active session addresses.
 
@@ -305,7 +277,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "Create a temporary inbox",
         operationId: "createInbox",
         description:
-          "Generates an inbox and its parent session, returning raw inbox and session tokens. Both tokens are stored only as SHA-256 hashes and returned only at creation time. Use the inbox token for inbox and message routes, and the session token for session routes.",
+          "Generates an inbox and, unless a valid session bearer token is supplied, a new parent session. The raw session token is returned once, under data.session.token; it is the only credential issued by this route and is stored as a SHA-256 hash. Pass it as the bearer token on every other route. When a valid, unexpired bearer token is sent, the existing session is reused and the caller's own token is echoed back in data.session.token. The inbox address is generated from a random local part; use POST /api/v1/inbox/custom to choose the local part.",
         responses: {
           201: {
             description: "Inbox created",
@@ -323,13 +295,119 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                     },
                     id: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
                     address: "generated-address@example.com",
-                    token: "raw-token-returned-once",
                     expiresAt: "2026-09-16T14:00:00.000Z",
                   },
                 },
               },
             },
           },
+          404: {
+            description:
+              "A bearer token was supplied but no session matches it. Requesting an inbox without a bearer token never returns 404.",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Session Not Found",
+                },
+              },
+            },
+          },
+          429: bearerErrors[429],
+          500: errorResponse,
+        },
+      },
+    },
+    "/api/v1/inbox/custom": {
+      post: {
+        tags: ["Inbox"],
+        summary: "Create a temporary inbox with a chosen local part",
+        operationId: "createCustomInbox",
+        description:
+          "Behaves exactly like POST /api/v1/inbox, but the address local part is supplied by the caller instead of generated, so the address is <localPart>@<MAIL_DOMAIN>. The local part must match ^[a-zA-Z0-9]+$ and be at most 64 characters; it is not normalized, so an existing address that differs only by case still collides. Session handling is identical: a new session is created unless a valid bearer token is reused.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CustomInboxRequest",
+              },
+              example: {
+                localPart: "mycustominbox",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Inbox created",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/CreateInboxResponse",
+                },
+                example: {
+                  success: true,
+                  data: {
+                    session: {
+                      token: "raw-session-token-returned-once",
+                      expiresAt: "2026-09-16T14:00:00.000Z",
+                    },
+                    id: "8a5f1a9d-0c52-4d54-9f40-4b5a6d2e0d92",
+                    address: "mycustominbox@example.com",
+                    expiresAt: "2026-09-16T14:00:00.000Z",
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Invalid or missing localPart",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message:
+                    "Invalid localPart. It must be a non-empty alphanumeric string of at most 64 characters.",
+                },
+              },
+            },
+          },
+          404: {
+            description: "A bearer token was supplied but no session matches it",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Session Not Found",
+                },
+              },
+            },
+          },
+          409: {
+            description: "The requested address is already taken",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox with this localPart already exists.",
+                },
+              },
+            },
+          },
+          429: bearerErrors[429],
           500: errorResponse,
         },
       },
@@ -340,7 +418,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "Fetch authenticated session information",
         operationId: "getSessionInfo",
         description:
-          "Returns session expiration metadata and the number of inboxes associated with the bearer session token.",
+          "Returns expiration metadata for the bearer session and the number of inboxes it owns, including soft-deleted ones.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -363,8 +441,21 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               },
             },
           },
-          ...sessionBearerErrors,
-          500: errorResponse,
+          ...bearerErrors,
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Internal server error",
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -374,7 +465,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "List inboxes for the authenticated session",
         operationId: "getSessionInboxes",
         description:
-          "Returns the email address and lifecycle metadata for each inbox owned by the bearer session, including each inbox's message count.",
+          "Returns the id, email address, and lifecycle metadata for each inbox owned by the bearer session, including each inbox's total message count. Soft-deleted inboxes are included; there is no filter parameter.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -390,6 +481,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                   data: {
                     inboxes: [
                       {
+                        id: "c56a4180-65aa-42ec-a945-5fd21dec0538",
                         address: "generated-address@example.com",
                         localPart: "generated-address",
                         domain: "example.com",
@@ -403,19 +495,37 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               },
             },
           },
-          ...sessionBearerErrors,
-          500: errorResponse,
+          ...bearerErrors,
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Error fetching session inboxes",
+                },
+              },
+            },
+          },
         },
       },
     },
-    "/api/v1/inbox/info": {
+    "/api/v1/inbox/{id}": {
       get: {
         tags: ["Inbox"],
-        summary: "Fetch authenticated inbox information",
+        summary: "Fetch a single inbox owned by the session",
         operationId: "getInboxInfo",
         description:
-          "Returns metadata for the inbox represented by the bearer token. No inbox ID or query parameter is used by this route.",
+          "Returns metadata for one inbox, including its expiration state and message count. The inbox must belong to the bearer session; an inbox owned by another session is reported as not found rather than forbidden.",
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            $ref: "#/components/parameters/InboxId",
+          },
+        ],
         responses: {
           200: {
             description: "Inbox information",
@@ -434,72 +544,31 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                     domain: "example.com",
                     createdAt: "2026-09-16T13:00:00.000Z",
                     expiresAt: "2026-09-16T14:00:00.000Z",
-                    message: {},
+                    message: {
+                      count: 3,
+                    },
                   },
                 },
               },
             },
           },
           ...bearerErrors,
-          404: {
-            description: "Inbox not found or deleted",
+          400: {
+            description: "Missing inbox ID",
             content: {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
-                },
-                examples: {
-                  notFound: {
-                    value: {
-                      success: false,
-                      message: "Inbox Not Found",
-                    },
-                  },
-                  deleted: {
-                    value: {
-                      success: false,
-                      message: "Inbox has been deleted",
-                    },
-                  },
-                },
-              },
-            },
-          },
-          500: errorResponse,
-        },
-      },
-    },
-    "/api/v1/inbox/extend": {
-      patch: {
-        tags: ["Inbox"],
-        summary: "Extend authenticated inbox expiration",
-        operationId: "extendInbox",
-        description:
-          "Adds exactly five minutes to the current expiration time and increments extendCount. The current implementation does not enforce a maximum extension count.",
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: "Inbox expiration extended",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ExtendInboxResponse",
                 },
                 example: {
-                  success: true,
-                  message: "Inbox time extended successfully",
-                  data: {
-                    expiresAt: "2026-09-16T14:05:00.000Z",
-                    lastExtendedAt: "2026-09-16T14:00:00.000Z",
-                    extendCount: 1,
-                  },
+                  success: false,
+                  message: "Inbox ID is required",
                 },
               },
             },
           },
-          ...bearerErrors,
           404: {
-            description: "Inbox not found or deleted",
+            description: "Inbox not found, not owned by the session, or deleted",
             content: {
               "application/json": {
                 schema: {
@@ -522,17 +591,42 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               },
             },
           },
-          500: errorResponse,
+          410: {
+            description: "The inbox itself has expired",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox has expired",
+                },
+              },
+            },
+          },
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "An error occurred while get inbox.",
+                },
+              },
+            },
+          },
         },
       },
-    },
-    "/api/v1/inbox/{id}": {
       delete: {
         tags: ["Inbox"],
         summary: "Permanently delete an inbox",
         operationId: "deleteInbox",
         description:
-          "Immediately and permanently deletes the inbox along with every message and attachment it owns. Runs as a single transaction that removes attachments first, then messages, then the inbox, so nothing is left for a later cleanup pass. This is a hard delete: the records are gone as soon as the request succeeds and cannot be recovered, and the address becomes free for reuse. Repeating the request returns 404 because the inbox no longer exists.",
+          "Immediately and permanently deletes the inbox along with every message and attachment it owns. The inbox must belong to the bearer session. Runs as a single transaction that removes attachments first, then messages, then the inbox, so nothing is left for a later cleanup pass. This is a hard delete: the records are gone as soon as the request succeeds and cannot be recovered, and the address becomes free for reuse. Repeating the request returns 404 because the inbox no longer exists. Expiration is not checked, so an expired inbox can still be deleted.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -559,7 +653,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               },
             },
           },
-          ...sessionBearerErrors,
+          ...bearerErrors,
           400: {
             description: "Missing inbox ID",
             content: {
@@ -575,7 +669,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             },
           },
           404: {
-            description: "Inbox not found, or already deleted",
+            description: "Inbox not found, not owned by the session, or already deleted",
             content: {
               "application/json": {
                 schema: {
@@ -605,14 +699,116 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/extend/{id}": {
+      patch: {
+        tags: ["Inbox"],
+        summary: "Extend an inbox expiration",
+        operationId: "extendInbox",
+        description:
+          "Adds exactly five minutes to the inbox expiration and increments extendCount. When the inbox has already expired, the five minutes are added to the current time instead of the stale expiration. The parent session expiration is pushed forward with the inbox, but is never shortened, and its lastExtendedAt is updated. The inbox must belong to the bearer session. The current implementation does not enforce a maximum extension count.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            $ref: "#/components/parameters/InboxId",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Inbox expiration extended",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ExtendInboxResponse",
+                },
+                example: {
+                  success: true,
+                  message: "Inbox time extended successfully",
+                  data: {
+                    expiresAt: "2026-09-16T14:05:00.000Z",
+                    lastExtendedAt: "2026-09-16T14:00:00.000Z",
+                    extendCount: 1,
+                  },
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing inbox ID",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Inbox ID is required",
+                },
+              },
+            },
+          },
+          404: {
+            description: "Inbox not found, not owned by the session, or deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                examples: {
+                  notFound: {
+                    value: {
+                      success: false,
+                      message: "Inbox Not Found",
+                    },
+                  },
+                  deleted: {
+                    value: {
+                      success: false,
+                      message: "Inbox has been deleted",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Unable to extend inbox time",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/v1/inbox/messages": {
       get: {
         tags: ["Messages"],
-        summary: "Fetch all messages from the authenticated inbox",
+        summary: "Fetch all messages from the session's inbox",
         operationId: "getInboxMessages",
         description:
-          "Returns every message belonging to the current inbox, ordered newest-first. Each item includes the public message metadata and attachment count.",
+          "Returns messages belonging to an inbox owned by the bearer session, newest-first, each with its attachment count. The inbox must be active: not deleted and not expired. When the session owns more than one inbox, the target inbox is selected by the optional inboxId query parameter; otherwise the first active inbox for the session is used.\n\n**Known routing issue:** in the current Express router, GET /api/v1/inbox/:id is registered before the /messages sub-router, so this exact path is matched by getInboxInfo and responds 404 (Inbox Not Found). Use GET /api/v1/inbox/messages/unread/all, or reorder the routes in src/api/v1/routes/inboxRoute.js to reach this endpoint.",
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "inboxId",
+            in: "query",
+            required: false,
+            description:
+              "Selects which of the session's inboxes to read from. Omit to use the first active inbox.",
+            schema: {
+              type: "string",
+              format: "uuid",
+            },
+          },
+        ],
         responses: {
           200: {
             description: "Inbox messages list",
@@ -625,6 +821,12 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                   success: true,
                   message: "Inbox messages fetched successfully",
                   data: {
+                    session: {
+                      id: "c56a4180-65aa-42ec-a945-5fd21dec0538",
+                      createdAt: "2026-09-16T13:00:00.000Z",
+                      expiresAt: "2026-09-16T14:00:00.000Z",
+                      lastExtendedAt: null,
+                    },
                     messages: [
                       {
                         id: "message-uuid",
@@ -657,18 +859,9 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             },
           },
           ...bearerErrors,
-          400: {
-            description: "Missing or invalid token",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ErrorResponse",
-                },
-              },
-            },
-          },
           404: {
-            description: "Inbox not found",
+            description:
+              "No active inbox found for the session. An expired or deleted inbox is reported the same way, and no separate 410 is returned by this route.",
             content: {
               "application/json": {
                 schema: {
@@ -676,20 +869,35 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 },
                 example: {
                   success: false,
-                  message: "Inbox Not Found",
+                  message: "Inbox not found or has expired",
                 },
               },
             },
           },
-          500: errorResponse,
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Error fetching inbox messages",
+                },
+              },
+            },
+          },
         },
       },
     },
     "/api/v1/inbox/messages/{id}": {
       get: {
         tags: ["Messages"],
-        summary: "Fetch a message from the authenticated inbox",
+        summary: "Fetch a single message",
         operationId: "getMessage",
+        description:
+          "Returns one message with its sanitized body and attachment list. The message must belong to an active inbox owned by the bearer session; an expired or deleted inbox is reported as Message Not Found. The body field carries the sanitized HTML when the message has one, and the plain-text body otherwise. The response is a public projection: it omits the message id and several persisted fields (raw MIME key and size, parsedAt, errorMessage, textBody/htmlBody as separate fields).",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -708,21 +916,12 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                   success: true,
                   message: "Message Fetched Success",
                   data: {
-                    id: "message-uuid",
-                    inboxId: "inbox-uuid",
-                    fromAddress: "sender@example.com",
-                    fromName: "Example Sender",
-                    toAddress: "generated-address@example.com",
                     subject: "Verification code",
                     sender: "Example Sender <sender@example.com>",
                     from: "sender@example.com",
                     to: "generated-address@example.com",
-                    textBody: "Your verification code is 123456.",
-                    htmlBody: "<p>Your verification code is <strong>123456</strong>.</p>",
-                    rawObjectKey: null,
-                    rawSizeBytes: null,
-                    rawHtmlSize: 53,
-                    sizeBytes: 184,
+                    body: "<p>Your verification code is <strong>123456</strong>.</p>",
+                    inboxId: "c56a4180-65aa-42ec-a945-5fd21dec0538",
                     attachments: [
                       {
                         id: "attachment-uuid",
@@ -736,9 +935,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                     isRead: false,
                     status: "PARSED",
                     receivedAt: "2026-09-16T13:10:00.000Z",
-                    parsedAt: "2026-09-16T13:10:00.250Z",
                     expiresAt: "2026-09-16T14:00:00.000Z",
-                    errorMessage: null,
                     createdAt: "2026-09-16T13:10:00.000Z",
                   },
                 },
@@ -747,40 +944,48 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           ...bearerErrors,
           400: {
-            description: "Missing message ID or token",
+            description: "Missing message ID",
             content: {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Missing Message Id",
                 },
               },
             },
           },
           404: {
-            description: "Inbox or message not found",
+            description:
+              "Message not found, not owned by the session, or belonging to an inbox that is expired or deleted",
             content: {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
-                examples: {
-                  inboxNotFound: {
-                    value: {
-                      success: false,
-                      message: "Inbox Not Found",
-                    },
-                  },
-                  messageNotFound: {
-                    value: {
-                      success: false,
-                      message: "Message Not Found",
-                    },
-                  },
+                example: {
+                  success: false,
+                  message: "Message Not Found",
                 },
               },
             },
           },
-          500: errorResponse,
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Error fetching message",
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -790,7 +995,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         summary: "Mark a message as read",
         operationId: "markMessageRead",
         description:
-          "Marks the specified message as read. The current implementation exposes this state-changing operation as GET.",
+          "Marks the specified message as read. The message must belong to an active inbox owned by the bearer session. The current implementation exposes this state-changing operation as GET, so it is not safe to pre-fetch or cache. The response echoes the session record.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -808,32 +1013,71 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 example: {
                   success: true,
                   message: "Message marked as read",
+                  data: {
+                    session: {
+                      id: "c56a4180-65aa-42ec-a945-5fd21dec0538",
+                      createdAt: "2026-09-16T13:00:00.000Z",
+                      expiresAt: "2026-09-16T14:00:00.000Z",
+                      lastExtendedAt: null,
+                    },
+                  },
                 },
               },
             },
           },
           ...bearerErrors,
           400: {
-            description: "Missing message ID or token",
+            description: "Missing message ID",
             content: {
               "application/json": {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+                example: {
+                  success: false,
+                  message: "Missing Message Id",
+                },
               },
             },
           },
-          500: errorResponse,
+          404: {
+            description: "Message not found or not owned by the session",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Message Not Found",
+                },
+              },
+            },
+          },
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Error marking message as read",
+                },
+              },
+            },
+          },
         },
       },
     },
     "/api/v1/inbox/messages/unread/all": {
       get: {
         tags: ["Messages"],
-        summary: "Fetch all unread messages for the authenticated inbox",
+        summary: "Fetch all unread messages for the session",
         operationId: "getUnreadMessages",
         description:
-          "Returns the unread messages for the current inbox, ordered by receivedAt descending. The controller returns only the public fields needed for the inbox UI.",
+          "Returns the unread messages of the session's active inbox, ordered by receivedAt descending, projected to the fields the inbox UI needs. Sessions with no active inbox receive 200 with an empty messages array rather than 404.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -846,41 +1090,39 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 example: {
                   success: true,
                   message: "Unread messages fetched successfully",
-                  data: [
-                    {
-                      id: "message-uuid",
-                      subject: "Verification code",
-                      sender: "Example Sender <sender@example.com>",
-                      to: "generated-address@example.com",
-                      receivedAt: "2026-09-16T13:10:00.000Z",
-                      isRead: false,
+                  data: {
+                    session: {
+                      id: "c56a4180-65aa-42ec-a945-5fd21dec0538",
+                      createdAt: "2026-09-16T13:00:00.000Z",
+                      expiresAt: "2026-09-16T14:00:00.000Z",
+                      lastExtendedAt: null,
                     },
-                    {
-                      id: "message-uuid-2",
-                      subject: "Password reset",
-                      sender: "Support <support@example.com>",
-                      to: "generated-address@example.com",
-                      receivedAt: "2026-09-16T12:45:00.000Z",
-                      isRead: false,
-                    },
-                  ],
+                    messages: [
+                      {
+                        id: "message-uuid",
+                        subject: "Verification code",
+                        sender: "Example Sender <sender@example.com>",
+                        to: "generated-address@example.com",
+                        receivedAt: "2026-09-16T13:10:00.000Z",
+                        isRead: false,
+                      },
+                      {
+                        id: "message-uuid-2",
+                        subject: "Password reset",
+                        sender: "Support <support@example.com>",
+                        to: "generated-address@example.com",
+                        receivedAt: "2026-09-16T12:45:00.000Z",
+                        isRead: false,
+                      },
+                    ],
+                  },
                 },
               },
             },
           },
           ...bearerErrors,
-          400: {
-            description: "Missing or invalid token",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ErrorResponse",
-                },
-              },
-            },
-          },
-          404: {
-            description: "Inbox not found",
+          500: {
+            description: "Request failed",
             content: {
               "application/json": {
                 schema: {
@@ -888,12 +1130,11 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
                 },
                 example: {
                   success: false,
-                  message: "Inbox Not Found",
+                  message: "Error fetching unread messages",
                 },
               },
             },
           },
-          500: errorResponse,
         },
       },
     },
@@ -1039,7 +1280,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         scheme: "bearer",
         bearerFormat: "token",
         description:
-          "Use the raw inbox token or session token returned by POST /api/v1/inbox, depending on the endpoint.",
+          "The raw session token returned as data.session.token by POST /api/v1/inbox or POST /api/v1/inbox/custom. Inbox-scoped routes additionally require the target inbox to belong to that session.",
       },
     },
     parameters: {
@@ -1137,7 +1378,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       CreatedInbox: {
         type: "object",
-        required: ["session", "id", "address", "token", "expiresAt"],
+        required: ["session", "id", "address", "expiresAt"],
         properties: {
           session: {
             type: "object",
@@ -1146,12 +1387,14 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
               token: {
                 type: "string",
                 description:
-                  "Raw bearer token for session endpoints. Returned only when the inbox is created.",
+                  "Raw session bearer token. Returned only when the session is created; when an existing session is reused, the caller's own token is echoed back here.",
                 example: "raw-session-token-returned-once",
               },
               expiresAt: {
                 type: "string",
                 format: "date-time",
+                description:
+                  "Session expiration. Never earlier than the inbox expiration, so it may outlive the inbox it was returned with.",
               },
             },
           },
@@ -1164,14 +1407,48 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             format: "email",
             example: "generated-address@example.com",
           },
-          token: {
+          expiresAt: {
             type: "string",
-            description: "Raw bearer token. Returned only when the inbox is created.",
-            example: "raw-token-returned-once",
+            format: "date-time",
+          },
+        },
+      },
+      CustomInboxRequest: {
+        type: "object",
+        required: ["localPart"],
+        properties: {
+          localPart: {
+            type: "string",
+            maxLength: 64,
+            pattern: "^[a-zA-Z0-9]+$",
+            description:
+              "Local part of the inbox address. Alphanumeric only, at most 64 characters. Not normalized, so it is stored and matched exactly as sent.",
+            example: "mycustominbox",
+          },
+        },
+      },
+      SessionSummary: {
+        type: "object",
+        description:
+          "Session record echoed inside message responses. The current controllers spread the full session row, so the payload also contains the owning session's id, tokenHash, and raw token; those internal fields are deliberately not documented here.",
+        required: ["createdAt", "expiresAt"],
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          createdAt: {
+            type: "string",
+            format: "date-time",
           },
           expiresAt: {
             type: "string",
             format: "date-time",
+          },
+          lastExtendedAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
           },
         },
       },
@@ -1240,8 +1517,12 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       SessionInboxSummary: {
         type: "object",
-        required: ["address", "localPart", "domain", "createdAt", "expiresAt", "messageCount"],
+        required: ["id", "address", "localPart", "domain", "createdAt", "expiresAt", "messageCount"],
         properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
           address: {
             type: "string",
             format: "email",
@@ -1311,8 +1592,15 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           message: {
             type: "object",
-            description: "The current controller returns an empty object because the loaded message array has no count property.",
-            additionalProperties: false,
+            description: "Message summary for the inbox.",
+            required: ["count"],
+            properties: {
+              count: {
+                type: "integer",
+                minimum: 0,
+                description: "Number of messages currently stored in the inbox.",
+              },
+            },
           },
         },
       },
@@ -1402,57 +1690,33 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       Message: {
         type: "object",
-        description: "Message response model derived from the Prisma Message model. The GET endpoint returns the public aliases and projections (from, to, body, sender, and attachment size/url); persistence-only fields are documented as nullable or optional because the current controller does not expose them.",
-        required: ["id", "subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt", "createdAt"],
+        description: "Public message projection returned by GET /api/v1/inbox/messages/{id}. It is a hand-built subset of the Prisma Message model: persisted fields such as id, textBody, htmlBody, rawObjectKey, rawSizeBytes, rawHtmlSize, sizeBytes, parsedAt, and errorMessage are not returned, and attachment sizeBytes/objectKey are renamed to size/url.",
+        required: ["subject", "sender", "from", "to", "body", "inboxId", "attachments", "isRead", "status", "receivedAt", "expiresAt", "createdAt"],
         properties: {
-          id: {
-            type: "string",
-            format: "uuid",
-          },
           subject: {
             type: "string",
             nullable: true,
           },
           sender: {
             type: "string",
-            description: "Public projection of the persisted fromName and fromAddress values.",
-          },
-          fromAddress: {
-            type: "string",
-            format: "email",
-            description: "Persisted sender address. Not returned by the current GET projection; use from in the response payload.",
-          },
-          fromName: {
-            type: "string",
-            nullable: true,
-            description: "Persisted sender display name. Not returned as a standalone field; it contributes to sender.",
+            description:
+              "Display string built from fromName and fromAddress as \"Name <address>\", falling back to the bare address when no display name was parsed.",
+            example: "Example Sender <sender@example.com>",
           },
           from: {
             type: "string",
             format: "email",
+            description: "Sender address, projected from the persisted fromAddress.",
           },
           to: {
             type: "string",
             format: "email",
-          },
-          toAddress: {
-            type: "string",
-            format: "email",
-            description: "Persisted recipient address. The public response exposes the same value as to.",
+            description: "Recipient address, projected from the persisted toAddress.",
           },
           body: {
             type: "string",
-            description: "Sanitized HTML when available; otherwise plain text.",
-          },
-          textBody: {
-            type: "string",
-            nullable: true,
-            description: "Persisted plain-text body. The public response combines body selection into body.",
-          },
-          htmlBody: {
-            type: "string",
-            nullable: true,
-            description: "Persisted sanitized HTML body. The public response exposes the selected body as body.",
+            description:
+              "Sanitized HTML when the message has an HTML body, otherwise the plain-text body, otherwise an empty string. Each read re-runs the sanitizer over the stored HTML.",
           },
           inboxId: {
             type: "string",
@@ -1478,39 +1742,6 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           expiresAt: {
             type: "string",
             format: "date-time",
-          },
-          rawObjectKey: {
-            type: "string",
-            nullable: true,
-            description: "Persisted raw-message object key. Not returned by the current GET endpoint.",
-          },
-          rawSizeBytes: {
-            type: "integer",
-            minimum: 0,
-            nullable: true,
-            description: "Persisted raw-message size in bytes. Not returned by the current GET endpoint.",
-          },
-          rawHtmlSize: {
-            type: "number",
-            format: "double",
-            nullable: true,
-            description: "Persisted raw HTML size. Not returned by the current GET endpoint.",
-          },
-          sizeBytes: {
-            type: "integer",
-            minimum: 0,
-            description: "Persisted message size in bytes. Not returned by the current GET endpoint.",
-          },
-          parsedAt: {
-            type: "string",
-            format: "date-time",
-            nullable: true,
-            description: "Timestamp when parsing completed. Not returned by the current GET endpoint.",
-          },
-          errorMessage: {
-            type: "string",
-            nullable: true,
-            description: "Persisted ingestion failure detail, when present. Not returned by the current GET endpoint.",
           },
           createdAt: {
             type: "string",
@@ -1550,7 +1781,7 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       },
       MessageReadResponse: {
         type: "object",
-        required: ["success", "message"],
+        required: ["success", "message", "data"],
         properties: {
           success: {
             type: "boolean",
@@ -1559,6 +1790,15 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           message: {
             type: "string",
             example: "Message marked as read",
+          },
+          data: {
+            type: "object",
+            required: ["session"],
+            properties: {
+              session: {
+                $ref: "#/components/schemas/SessionSummary",
+              },
+            },
           },
         },
       },
@@ -1576,8 +1816,11 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           data: {
             type: "object",
-            required: ["messages"],
+            required: ["session", "messages"],
             properties: {
+              session: {
+                $ref: "#/components/schemas/SessionSummary",
+              },
               messages: {
                 type: "array",
                 items: {
@@ -1646,9 +1889,18 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
             example: "Unread messages fetched successfully",
           },
           data: {
-            type: "array",
-            items: {
-              $ref: "#/components/schemas/UnreadMessage",
+            type: "object",
+            required: ["session", "messages"],
+            properties: {
+              session: {
+                $ref: "#/components/schemas/SessionSummary",
+              },
+              messages: {
+                type: "array",
+                items: {
+                  $ref: "#/components/schemas/UnreadMessage",
+                },
+              },
             },
           },
         },
@@ -1926,13 +2178,15 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           address: {
             type: "string",
             format: "email",
-            description: "Temporary inbox email address (case-insensitive).",
+            description:
+              "Temporary inbox email address. Matched case-insensitively.",
             example: "user-abc123@domain.com",
           },
           token: {
             type: "string",
-            description: "Plaintext token returned upon inbox creation.",
-            example: "raw-inbox-token",
+            description:
+              "Raw session token returned as data.session.token when the inbox was created. The room is granted only when this token hashes to the session that owns the address.",
+            example: "raw-session-token",
           },
         },
       },
