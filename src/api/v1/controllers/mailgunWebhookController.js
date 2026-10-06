@@ -18,6 +18,7 @@ export function createMailgunDashboardController() {
 export function createMailgunWebhookController({ prisma }) {
 	return async (req, res) => {
 		try {
+			console.log("Received Mailgun webhook:", req.body);
 			// multer (upload.any()) puts text fields in req.body, but the
 			// body-mime file part lands in req.files as a Buffer.
 			const bodyMimeFile = (req.files || []).find(

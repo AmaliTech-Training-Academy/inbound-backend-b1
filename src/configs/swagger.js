@@ -210,6 +210,10 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
       description: "Authenticated message retrieval and read state operations.",
     },
     {
+      name: "Attachments",
+      description: "Authenticated binary downloads for attachments belonging to the current session.",
+    },
+    {
       name: "Mailgun",
       description: "Inbound Mailgun webhook endpoints.",
     },
@@ -788,6 +792,109 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
       },
     },
+    "/api/v1/inbox/attachments/{attachmentId}": {
+      get: {
+        tags: ["Attachments"],
+        summary: "Download an inbox attachment",
+        operationId: "downloadAttachment",
+        description:
+          "Streams the raw stored bytes of one attachment. The attachment must belong to a message in an inbox that the bearer session owns and that is neither deleted nor expired; anything else is reported as Attachment not found. Attachments persisted before their bytes were stored have a null content column and are reported the same way. The response is binary rather than JSON: Content-Type is taken from the stored attachment and falls back to application/octet-stream when it is missing or not a valid media type, Content-Disposition is set to the original filename, and the response is marked no-store and nosniff. Unlike the message endpoints, this route returns no envelope, so failures are the only JSON responses.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            $ref: "#/components/parameters/AttachmentId",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Attachment bytes",
+            headers: {
+              "Content-Disposition": {
+                description: "Attachment disposition with the stored filename.",
+                schema: {
+                  type: "string",
+                },
+                example: 'attachment; filename="document.pdf"',
+              },
+              "Content-Type": {
+                description:
+                  "Stored media type, or application/octet-stream when the stored value is missing or invalid.",
+                schema: {
+                  type: "string",
+                },
+                example: "application/pdf",
+              },
+              "Cache-Control": {
+                description: "Always private, no-store.",
+                schema: {
+                  type: "string",
+                },
+                example: "private, no-store",
+              },
+              "X-Content-Type-Options": {
+                description: "Always nosniff.",
+                schema: {
+                  type: "string",
+                },
+                example: "nosniff",
+              },
+            },
+            content: {
+              "application/octet-stream": {
+                schema: {
+                  type: "string",
+                  format: "binary",
+                },
+              },
+            },
+          },
+          ...bearerErrors,
+          400: {
+            description: "Missing attachment ID",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Missing Attachment Id",
+                },
+              },
+            },
+          },
+          404: {
+            description:
+              "Attachment not found, not owned by the session, in an expired or deleted inbox, or stored without bytes",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Attachment not found",
+                },
+              },
+            },
+          },
+          500: {
+            description: "Request failed",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+                example: {
+                  success: false,
+                  message: "Failed to download attachment",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/v1/inbox/messages": {
       get: {
         tags: ["Messages"],
@@ -1295,6 +1402,17 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
         },
         example: "message-uuid",
       },
+      AttachmentId: {
+        name: "attachmentId",
+        in: "path",
+        required: true,
+        description: "UUID of the attachment to download.",
+        schema: {
+          type: "string",
+          format: "uuid",
+        },
+        example: "69c9bf3b-dee8-48d8-968a-7e961282f8cf",
+      },
       InboxId: {
         name: "id",
         in: "path",
@@ -1758,6 +1876,8 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           id: {
             type: "string",
             format: "uuid",
+            description:
+              "Use with GET /api/v1/inbox/attachments/{attachmentId} to download the bytes.",
           },
           filename: {
             type: "string",
@@ -1771,7 +1891,8 @@ When a new message arrives for a subscribed inbox, the server broadcasts an even
           },
           url: {
             type: "string",
-            description: "The stored object key returned by the current message API. It is not a filesystem path or a downloadable HTTP URL.",
+            description:
+              "The stored object key returned by the current message API. It is not a filesystem path and not itself downloadable; fetch the bytes from GET /api/v1/inbox/attachments/{id} instead.",
           },
           expiresAt: {
             type: "string",
