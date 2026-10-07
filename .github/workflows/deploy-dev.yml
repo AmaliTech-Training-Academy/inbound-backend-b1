@@ -102,5 +102,4 @@ jobs:
             task-definition: ${{ steps.task-def.outputs.task-definition }}
             service: inbound-api-b299
             cluster: inbound-cluster
-            wait-for-service-stability: true
         
