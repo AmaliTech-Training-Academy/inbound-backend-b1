@@ -1,0 +1,26 @@
+{
+  "name": "inbound-email-cli",
+  "version": "1.1.0",
+  "description": "Terminal client for the inbound email API: disposable inboxes, live delivery, and a local HTML message viewer.",
+  "main": "index.js",
+  "bin": {
+    "inbound": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "email",
+    "disposable",
+    "cli",
+    "inbox",
+    "socket.io"
+  ],
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}
